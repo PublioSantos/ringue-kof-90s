@@ -1,13 +1,13 @@
-# Ringue KOF 2026 🥊
+# Ringue KOF 90's 🥊
 
-A versão moderna do [Ringue KOF 87](https://github.com/PublioSantos/ringue-kof-87),
+A continuação do [Ringue KOF 87](https://github.com/PublioSantos/ringue-kof-87),
 a homenagem em **Kof** ao RealSports Boxing (Atari 2600, 1987).
-Mesma ideia, com a lógica, os gráficos e os sons de um jogo de luta de hoje,
-e continua tudo escrito em Kof.
+Mesma ideia, agora com cara de fliperama dos anos 90: combos, super golpe,
+juízes, torcida e trilha sintetizada. Continua tudo escrito em Kof.
 
-![Tela de abertura do Ringue KOF 2026](docs/titulo.png)
+![Tela de abertura do Ringue KOF 90's](docs/titulo.png)
 
-![Luta no Ringue KOF 2026: troca de golpes com contra-ataque](docs/luta.png)
+![Luta no Ringue KOF 90's: troca de golpes com contra-ataque](docs/luta.png)
 
 | Super golpe | Knockdown e contagem |
 |---|---|
@@ -19,14 +19,14 @@ e continua tudo escrito em Kof.
 
 ## Como rodar
 
-Baixe **`ringue-kof-2026.html`** (botão *Download raw file* na página do
+Baixe **`ringue-kof-90s.html`** (botão *Download raw file* na página do
 arquivo) e abra no navegador: é o jogo inteiro num arquivo só, funciona
 offline, sem servidor.
 
 Com o Kof instalado:
 
 ```bash
-kof run ringue2026.kf --target js     # roda no webview do próprio Kof
+kof run ringue90s.kf --target js     # roda no webview do próprio Kof
 kof run ferramentas/empacotar.kf      # junta partes/, compila e gera o HTML único
 ```
 
@@ -46,9 +46,9 @@ Clique em **LUTAR!** (ou em qualquer botão): isso ativa o teclado.
 Enter = confirmar · P ou Esc = pausa · N = som · M = música ·
 botões na tela para mouse e toque.
 
-## 1987 x 2026
+## 87 x 90's
 
-| | Ringue KOF 87 | Ringue KOF 2026 |
+| | Ringue KOF 87 | Ringue KOF 90's |
 |---|---|---|
 | Golpes | 3 (jab, corpo, gancho) | 5, com preparo, impacto e recuperação |
 | Defesa | guarda | guarda que pode ser quebrada, esquiva com janela perfeita |
@@ -115,7 +115,7 @@ arpejo e acordes).
 | `partes/04-ia-fluxo.kf` (IA, fluxo, controles) | 511 | 466 |
 | `partes/05-graficos.kf` (arena, lutadores, partículas) | 497 | 446 |
 | `partes/06-telas-main.kf` (HUD, telas, main) | 461 | 421 |
-| **`ringue2026.kf`** (as partes juntas) | **3.183** | **2.848** |
+| **`ringue90s.kf`** (as partes juntas) | **3.183** | **2.848** |
 | `ferramentas/empacotar.kf` | 125 | 99 |
 
 ## Notas técnicas

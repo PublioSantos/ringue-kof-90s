@@ -1,11 +1,11 @@
 // ============================================================================
-//  EMPACOTADOR do Ringue KOF 2026 — 100% Kof
+//  EMPACOTADOR do Ringue KOF 90's — 100% Kof
 //
-//  0. junta partes/*.kf em ringue2026.kf
-//  1. compila ringue2026.kf para JS (kof build ... --target js --output web)
+//  0. junta partes/*.kf em ringue90s.kf
+//  1. compila ringue90s.kf para JS (kof build ... --target js --output web)
 //  2. ajusta o titulo da pagina e otimiza o desenho no Canvas
 //  3. junta runtime + jogo num unico <script type="module"> embutido
-//     -> ringue-kof-2026.html abre offline, direto do disco (file://)
+//     -> ringue-kof-90s.html abre offline, direto do disco (file://)
 //
 //  Uso (na pasta do projeto):   kof run ferramentas/empacotar.kf
 // ============================================================================
@@ -64,20 +64,20 @@ String ler(String caminho) {
 }
 
 main() {
-    if (!File("ringue2026.kf").exists()) {
+    if (!File("ringue90s.kf").exists()) {
         println("Rode na pasta do projeto:  kof run ferramentas/empacotar.kf")
         process.exit(1)
     }
-    // o codigo-fonte fica dividido em partes/; junta tudo em ringue2026.kf
+    // o codigo-fonte fica dividido em partes/; junta tudo em ringue90s.kf
     var partes = listOf("01-base.kf", "02-audio.kf", "03-luta.kf", "04-ia-fluxo.kf", "05-graficos.kf", "06-telas-main.kf")
     if (File("partes/01-base.kf").exists()) {
         var fonte = ""
         for (var nome in partes) { fonte = fonte + ler("partes/" + nome) }
-        File("ringue2026.kf").writeText(fonte)
-        println("0/3 partes/ juntadas em ringue2026.kf")
+        File("ringue90s.kf").writeText(fonte)
+        println("0/3 partes/ juntadas em ringue90s.kf")
     }
-    println("1/3 compilando ringue2026.kf para JS...")
-    var r = process.run("kof", "build", "ringue2026.kf", "--target", "js", "--output", "web")
+    println("1/3 compilando ringue90s.kf para JS...")
+    var r = process.run("kof", "build", "ringue90s.kf", "--target", "js", "--output", "web")
     if (r.exitCode != 0) {
         println(r.stdout)
         println(r.stderr)
@@ -87,8 +87,8 @@ main() {
 
     println("2/3 ajustando a pagina...")
     var html = ler("web/index.html")
-    html = trocar(html, "<title>Default — Kof</title>", "<title>Ringue KOF 2026</title>")
-    html = trocar(html, "<span class=\"name\">Default</span>", "<span class=\"name\">Ringue KOF 2026</span>")
+    html = trocar(html, "<title>Default — Kof</title>", "<title>Ringue KOF 90's</title>")
+    html = trocar(html, "<span class=\"name\">Default</span>", "<span class=\"name\">Ringue KOF 90's</span>")
     html = trocar(html, "<span class=\"kind\">Kof output</span>", "<span class=\"kind\">Powered by Kof · github.com/KofLang</span>")
     File("web/index.html").writeText(html)
 
@@ -111,7 +111,7 @@ main() {
         println("   otimizacao do Canvas aplicada no runtime")
     }
 
-    println("3/3 gerando ringue-kof-2026.html (arquivo unico)...")
+    println("3/3 gerando ringue-kof-90s.html (arquivo unico)...")
     var js = semModulos(rt) + semModulos(ler("web/Default.mjs"))
     js = trocar(js, "</script", "<\\/script")
     var tag = "<script type=\"module\" src=\"Default.mjs\"></script>"
@@ -120,6 +120,6 @@ main() {
         process.exit(1)
     }
     var unico = trocar(html, tag, "<script type=\"module\">\n" + js + "</script>")
-    File("ringue-kof-2026.html").writeText(unico)
-    println("pronto: web/ e ringue-kof-2026.html")
+    File("ringue-kof-90s.html").writeText(unico)
+    println("pronto: web/ e ringue-kof-90s.html")
 }

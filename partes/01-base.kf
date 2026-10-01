@@ -1,12 +1,12 @@
 // ============================================================================
-//  RINGUE KOF 2026
+//  RINGUE KOF 90'S
 //  A versao moderna da homenagem ao RealSports Boxing (Atari 2600, 1987).
 //
 //  100% Kof: fisica, IA adaptativa, juizes, camera, particulas, fonte vetorial,
 //  lutadores articulados e todo o audio (socos, gongo, torcida e trilha
 //  synthwave) sao calculados pelo proprio programa.
 //
-//  Rodar:   kof run ringue2026.kf --target js
+//  Rodar:   kof run ringue90s.kf --target js
 //  Pacote:  kof run ferramentas/empacotar.kf
 //
 //  Powered by Kof - https://github.com/KofLang

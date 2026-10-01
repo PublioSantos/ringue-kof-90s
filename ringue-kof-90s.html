@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Ringue KOF 2026</title>
+  <title>Ringue KOF 90's</title>
   <style>
     :root {
       --bg: #282a36; --fg: #f8f8f2; --panel: #21222c;
@@ -82,7 +82,7 @@
 <body>
   <div id="kof-titlebar">
     <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
-    <span class="name">Ringue KOF 2026</span><span class="kind">Powered by Kof · github.com/KofLang</span>
+    <span class="name">Ringue KOF 90's</span><span class="kind">Powered by Kof · github.com/KofLang</span>
   </div>
   <div id="kof-root"></div>
   <div id="kof-status">terminated</div>
@@ -3562,7 +3562,7 @@ function loadStep(m) {
 
 function sfx(g, id) {
     let m = g.mix;
-    if ((!!((m.on ? 0 : 1) || (m.loaded <= id)))) {
+    if (((m.on ? 0 : 1) || (m.loaded <= id))) {
         return;
     } else {
         if ((m.q0 < 0)) {
@@ -3646,7 +3646,7 @@ function drain(g, c0, c1, c2, c3, c4, mus, amb) {
     let _fldrecv20 = m;
     let _fldval21 = -1;
     (_fldrecv20.q3 = _fldval21);
-    let wantMusic = (!!((!!((!!(m.on && m.music)) && m.playMusic)) && (m.loaded > K.S_MUSIC)));
+    let wantMusic = (((m.on && m.music) && m.playMusic) && (m.loaded > K.S_MUSIC));
     if (wantMusic) {
         if ((m.musicT <= 0)) {
             fire(mus, kofListGet(m.uris, K.S_MUSIC));
@@ -3665,7 +3665,7 @@ function drain(g, c0, c1, c2, c3, c4, mus, amb) {
             (_fldrecv27.musicT = _fldval28);
         }
     }
-    let wantCrowd = (!!((!!(m.on && m.playCrowd)) && (m.loaded > K.S_CROWD)));
+    let wantCrowd = ((m.on && m.playCrowd) && (m.loaded > K.S_CROWD));
     if (wantCrowd) {
         if ((m.crowdT <= 0)) {
             fire(amb, kofListGet(m.uris, K.S_CROWD));
@@ -4009,7 +4009,7 @@ function pop(g, s, x, y, sz, col) {
     let _idx = 0;
     for (; (_idx < kofListSize(_coll)); _idx = ((_idx + 1) | 0)) {
         let _forInVar = kofListGet(_coll, _idx);
-        if ((!!(((_forInVar.s === s) ? 1 : 0) && (_forInVar.t < 50)))) {
+        if ((((_forInVar.s === s) ? 1 : 0) && (_forInVar.t < 50))) {
             return;
         } else {
             if (((dabs((_forInVar.x - x)) < 160.0) & (dabs((_forInVar.y - yy)) < toD(((_forInVar.sz * 8) | 0))))) {
@@ -4288,7 +4288,7 @@ function startRound(g) {
 function startPunch(g, p, type) {
     let cost = pCost(type);
     if ((p.sta < ((cost / 2) | 0))) {
-        if ((!!(p.human && (((g.frame - p.tiredT) | 0) > 150)))) {
+        if ((p.human && (((g.frame - p.tiredT) | 0) > 150))) {
             let _fldrecv4 = p;
             let _fldval5 = g.frame;
             (_fldrecv4.tiredT = _fldval5);
@@ -4302,7 +4302,7 @@ function startPunch(g, p, type) {
         let _fldrecv8 = p;
         let _fldval9 = false;
         (_fldrecv8.star = _fldval9);
-        if ((!!((!!(p.inMod && (p.meter >= 100))) && (type !== K.JAB)))) {
+        if (((p.inMod && (p.meter >= 100)) && (type !== K.JAB))) {
             let _fldrecv10 = p;
             let _fldval11 = true;
             (_fldrecv10.star = _fldval11);
@@ -4363,7 +4363,7 @@ function resolve(g, at, df) {
     let dx = ((df.x - at.x) * toD(at.face));
     let dz = dabs((df.z - at.z));
     let reach = (toD(pReach(type)) + (toD(stat(at.kind, 1)) * 2.0));
-    if ((!!((!!((!!(((dx < 22.0) | (dx > reach)) || (dz > 18.0))) || (df.st === K.FALL))) || (df.st === K.RISE)))) {
+    if ((((((dx < 22.0) | (dx > reach)) | (dz > 18.0)) | (df.st === K.FALL)) | (df.st === K.RISE))) {
         sfx(g, K.S_WHOOSH);
         let _fldrecv10 = at;
         let _fldval11 = imax(0, ((at.sta - 12) | 0));
@@ -4378,7 +4378,7 @@ function resolve(g, at, df) {
         if ((type === K.BODY)) {
             hy = (floorY(df.z) - (120.0 * scaleZ(df.z)));
         }
-        if ((!!(((df.st === K.SLIP) & (df.stT >= 3)) && (df.stT <= 16)))) {
+        if ((((df.st === K.SLIP) & (df.stT >= 3)) & (df.stT <= 16))) {
             sfx(g, K.S_SLIP);
             pop(g, "ESQUIVA PERFEITA", df.x, (headY(df) - 34.0), 4, 1860632575);
             let _fldrecv18 = g;
@@ -4444,8 +4444,8 @@ function resolve(g, at, df) {
             if (at.star) {
                 dmg = ((((dmg * 22) | 0) / 10) | 0);
             }
-            let guarding = (!!(df.inG && ((df.st === K.IDLE) | (df.st === K.BLOCKED))));
-            if ((!!((!!(guarding && (isBody ? 0 : 1))) && (at.star ? 0 : 1)))) {
+            let guarding = (df.inG && ((df.st === K.IDLE) | (df.st === K.BLOCKED)));
+            if (((guarding && (isBody ? 0 : 1)) && (at.star ? 0 : 1))) {
                 if ((df.sta < 110)) {
                     pop(g, "GUARDA QUEBRADA", df.x, (headY(df) - 34.0), 4, -8897281);
                 } else {
@@ -4481,7 +4481,7 @@ function resolve(g, at, df) {
                     return;
                 }
             }
-            if ((!!(guarding && isBody))) {
+            if ((guarding && isBody)) {
                 dmg = ((((dmg * 75) | 0) / 100) | 0);
             }
             let _fldrecv60 = df;
@@ -4948,7 +4948,7 @@ function stepFighter(g, p, o) {
         let _fldval15 = ((p.hitCool - 1) | 0);
         (_fldrecv14.hitCool = _fldval15);
     } else {
-        if ((!!(((p.rec > 0) & ((g.frame % 5) === 0)) && (p.st !== K.FALL)))) {
+        if ((((p.rec > 0) & ((g.frame % 5) === 0)) & (p.st !== K.FALL))) {
             let _fldrecv16 = p;
             let _fldval17 = ((p.rec - 1) | 0);
             (_fldrecv16.rec = _fldval17);
@@ -5011,7 +5011,7 @@ function stepFighter(g, p, o) {
                     }
                 } else {
                     if ((p.st === K.PUNCH)) {
-                        if ((!!((p.hitDone ? 0 : 1) && (p.stT >= startupOf(p))))) {
+                        if (((p.hitDone ? 0 : 1) && (p.stT >= startupOf(p)))) {
                             let _fldrecv40 = p;
                             let _fldval41 = true;
                             (_fldrecv40.hitDone = _fldval41);
@@ -5021,7 +5021,7 @@ function stepFighter(g, p, o) {
                             }
                         }
                         let _scopedVar$chain = ((p.stLen - 8) | 0);
-                        if ((!!(((p.qPunch > 0) & (p.stT >= _scopedVar$chain)) && p.hitDone))) {
+                        if ((((p.qPunch > 0) & (p.stT >= _scopedVar$chain)) & p.hitDone)) {
                             startPunch(g, p, p.qPunch);
                         } else {
                             if ((p.stT >= p.stLen)) {
@@ -5100,7 +5100,7 @@ function stepFighter(g, p, o) {
             (_fldrecv70.vz = _fldval71);
             let nx = clampd((p.x + p.vx), toD(K.XMIN), toD(K.XMAX));
             let nz = clampd((p.z + p.vz), 0.0, 100.0);
-            if ((!!(((dabs((nz - o.z)) < 20.0) & (dabs((nx - o.x)) < 52.0)) && (o.st !== K.FALL)))) {
+            if ((((dabs((nz - o.z)) < 20.0) & (dabs((nx - o.x)) < 52.0)) & (o.st !== K.FALL))) {
                 if ((dabs((nx - o.x)) < dabs((p.x - o.x)))) {
                     nx = p.x;
                 }
@@ -5144,7 +5144,7 @@ function stepFighter(g, p, o) {
             if ((p.st === K.SLIP)) {
                 target = -1.0;
             }
-            if ((!!(p.inG && (p.st === K.IDLE)))) {
+            if ((p.inG && (p.st === K.IDLE))) {
                 target = 0.2;
             }
             let _fldrecv98 = p;
@@ -5221,7 +5221,7 @@ function aiSlip(k) {
 
 function aiCombo(g, k, oppGuard) {
     let r = rnd(g.r, 5);
-    if ((!!(oppGuard && (rnd(g.r, 100) < 60)))) {
+    if ((oppGuard && (rnd(g.r, 100) < 60))) {
         if ((r < 2)) {
             return "5";
         } else {
@@ -5230,70 +5230,66 @@ function aiCombo(g, k, oppGuard) {
             } else {
                 return "153";
             }
-        }
-    } else {
-        if ((!k)) {
-            if ((!r)) {
-                return "1";
-            } else {
-                if ((r === 1)) {
-                    return "11";
+            if ((!k)) {
+                if ((!r)) {
+                    return "1";
                 } else {
-                    if ((r === 2)) {
-                        return "12";
-                    } else {
-                        if ((r === 3)) {
-                            return "112";
-                        } else {
-                            return "1213";
-                        }
-                    }
-                }
-            }
-        } else {
-            if ((k === 1)) {
-                if ((r < 2)) {
-                    return "12";
-                } else {
-                    if ((r === 2)) {
-                        return "23";
-                    } else {
-                        if ((r === 3)) {
-                            return "53";
-                        } else {
-                            return "1";
-                        }
-                    }
-                }
-            } else {
-                if ((k === 2)) {
-                    if ((r < 2)) {
-                        return "2";
+                    if ((r === 1)) {
+                        return "11";
                     } else {
                         if ((r === 2)) {
-                            return "23";
+                            return "12";
                         } else {
                             if ((r === 3)) {
-                                return "34";
+                                return "112";
                             } else {
-                                return "13";
+                                return "1213";
                             }
-                        }
-                    }
-                } else {
-                    if ((!r)) {
-                        return "53";
-                    } else {
-                        if ((r === 1)) {
-                            return "535";
-                        } else {
-                            if ((r === 2)) {
-                                return "343";
-                            } else {
-                                if ((r === 3)) {
-                                    return "1234";
+                            if ((k === 1)) {
+                                if ((r < 2)) {
+                                    return "12";
                                 } else {
-                                    return "55";
+                                    if ((r === 2)) {
+                                        return "23";
+                                    } else {
+                                        if ((r === 3)) {
+                                            return "53";
+                                        } else {
+                                            return "1";
+                                        }
+                                        if ((k === 2)) {
+                                            if ((r < 2)) {
+                                                return "2";
+                                            } else {
+                                                if ((r === 2)) {
+                                                    return "23";
+                                                } else {
+                                                    if ((r === 3)) {
+                                                        return "34";
+                                                    } else {
+                                                        return "13";
+                                                    }
+                                                    if ((!r)) {
+                                                        return "53";
+                                                    } else {
+                                                        if ((r === 1)) {
+                                                            return "535";
+                                                        } else {
+                                                            if ((r === 2)) {
+                                                                return "343";
+                                                            } else {
+                                                                if ((r === 3)) {
+                                                                    return "1234";
+                                                                } else {
+                                                                    return "55";
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -5360,7 +5356,7 @@ function think(g, p, o) {
         let _fldval21 = false;
         (_fldrecv20.inG = _fldval21);
     }
-    if ((!!(((p.counterT > 0) & (p.st === K.IDLE)) && (p.qPunch === 0)))) {
+    if ((((p.counterT > 0) & (p.st === K.IDLE)) & (p.qPunch === 0))) {
         if ((!rnd(g.r, 2))) {
             let _fldrecv22 = p;
             let _fldval23 = K.CROSS;
@@ -5377,7 +5373,7 @@ function think(g, p, o) {
         let _fldval29 = 0;
         (_fldrecv28.aiGuard = _fldval29);
     }
-    if ((!!((!!((((p.plan === "") ? 1 : 0) === 0) && (p.qPunch === 0))) && (p.aiGuard === 0)))) {
+    if ((((((p.plan === "") ? 1 : 0) === 0) && (p.qPunch === 0)) && (p.aiGuard === 0))) {
         if (((p.st === K.IDLE) | ((p.st === K.PUNCH) & p.hitDone))) {
             let _fldrecv30 = p;
             let _fldval31 = digit(p.plan, p.planI);
@@ -5488,7 +5484,7 @@ function think(g, p, o) {
                     (_fldrecv79.inD = _fldval80);
                 }
             }
-            if ((!!(((dabs(dz) <= 14.0) & ((p.plan === "") ? 1 : 0)) && (p.st === K.IDLE)))) {
+            if ((((dabs(dz) <= 14.0) & ((p.plan === "") ? 1 : 0)) & (p.st === K.IDLE))) {
                 let _scopedVar$aggr = ((((aiAggr(k) * ((2 + g.diff) | 0)) | 0) / 4) | 0);
                 if ((o.st === K.HIT)) {
                     _scopedVar$aggr = ((_scopedVar$aggr + 30) | 0);
@@ -5544,7 +5540,7 @@ function riseZone(p) {
 }
 
 function riseTry(g, p) {
-    if ((!!(((p.riseCool > 0) | (p.st !== K.FALL)) || (p.stT < 45)))) {
+    if ((((p.riseCool > 0) | (p.st !== K.FALL)) | (p.stT < 45))) {
         return;
     } else {
         if ((dabs(riseMarker(g, p)) < riseZone(p))) {
@@ -5806,7 +5802,7 @@ function tick(g) {
         let _fldval4 = loadStep(g.mix);
         (_fldrecv3.loaded = _fldval4);
     }
-    if ((!!(((g.state === K.TITLE) | (g.state === K.SELECT)) || (g.state === K.PAUSE)))) {
+    if ((((g.state === K.TITLE) | (g.state === K.SELECT)) | (g.state === K.PAUSE))) {
         let _fldrecv5 = g;
         let _fldval6 = ((g.t + 1) | 0);
         (_fldrecv5.t = _fldval6);
@@ -5870,7 +5866,7 @@ function tick(g) {
                         if ((_scopedVar$h.human ? 0 : 1)) {
                             _scopedVar$h = g.b;
                         }
-                        if ((!!(_scopedVar$h.human && (_scopedVar$h.hp < 230)))) {
+                        if ((_scopedVar$h.human && (_scopedVar$h.hp < 230))) {
                             let _fldrecv25 = g;
                             let _fldval26 = ((g.heartT - 1) | 0);
                             (_fldrecv25.heartT = _fldval26);
@@ -5958,7 +5954,7 @@ function confirm(g) {
 }
 
 function togglePause(g) {
-    if ((!!(((g.state === K.FIGHT) | (g.state === K.DOWN)) || (g.state === K.INTRO)))) {
+    if ((((g.state === K.FIGHT) | (g.state === K.DOWN)) | (g.state === K.INTRO))) {
         let _fldrecv1 = g;
         let _fldval2 = g.state;
         (_fldrecv1.prevState = _fldval2);
@@ -6004,7 +6000,7 @@ function press(g, p, type, down) {
             if ((g.downWho === 2)) {
                 _scopedVar$dn = g.b;
             }
-            if ((!!((_scopedVar$dn === p) && p.human))) {
+            if (((_scopedVar$dn === p) && p.human)) {
                 riseTry(g, p);
             }
             return;
@@ -6022,11 +6018,11 @@ function press(g, p, type, down) {
 function edge(k, down) {
     let tagk = (String((String("[") + String(k))) + String("]"));
     let was = (Held.keys.indexOf(tagk) >= 0);
-    if ((!!(down && (was ? 0 : 1)))) {
+    if ((down && (was ? 0 : 1))) {
         (Held.keys = (String(Held.keys) + String(tagk)));
         return true;
     } else {
-        if ((!!((down ? 0 : 1) && was))) {
+        if (((down ? 0 : 1) && was)) {
             let _scopedVar$i = Held.keys.indexOf(tagk);
             (Held.keys = (String(Held.keys.substring(0, _scopedVar$i)) + String(Held.keys.substring(((_scopedVar$i + tagk.length) | 0), Held.keys.length))));
         }
@@ -6037,21 +6033,21 @@ function edge(k, down) {
 function onKey(g, raw, down) {
     let k = raw.toLowerCase();
     let fresh = edge(k, down);
-    if ((!!(fresh && ((k === "enter") ? 1 : 0)))) {
+    if ((fresh && ((k === "enter") ? 1 : 0))) {
         confirm(g);
         return;
     } else {
-        if ((!!(fresh && (!!(((k === "p") ? 1 : 0) || ((k === "escape") ? 1 : 0)))))) {
+        if ((fresh && (((k === "p") ? 1 : 0) || ((k === "escape") ? 1 : 0)))) {
             togglePause(g);
             return;
         } else {
-            if ((!!(fresh && ((k === "n") ? 1 : 0)))) {
+            if ((fresh && ((k === "n") ? 1 : 0))) {
                 let _fldrecv5 = g.mix;
                 let _fldval6 = (g.mix.on ? 0 : 1);
                 (_fldrecv5.on = _fldval6);
                 return;
             } else {
-                if ((!!(fresh && ((k === "m") ? 1 : 0)))) {
+                if ((fresh && ((k === "m") ? 1 : 0))) {
                     let _fldrecv7 = g.mix;
                     let _fldval8 = (g.mix.music ? 0 : 1);
                     (_fldrecv7.music = _fldval8);
@@ -6075,27 +6071,27 @@ function onKey(g, raw, down) {
                         let a = g.a;
                         let b = g.b;
                         let solo = (g.mode === 1);
-                        if ((!!(((k === "a") ? 1 : 0) || (!!(solo && ((k === "arrowleft") ? 1 : 0)))))) {
+                        if ((((k === "a") ? 1 : 0) || (solo && ((k === "arrowleft") ? 1 : 0)))) {
                             let _fldrecv12 = a;
                             let _fldval13 = down;
                             (_fldrecv12.inL = _fldval13);
                         }
-                        if ((!!(((k === "d") ? 1 : 0) || (!!(solo && ((k === "arrowright") ? 1 : 0)))))) {
+                        if ((((k === "d") ? 1 : 0) || (solo && ((k === "arrowright") ? 1 : 0)))) {
                             let _fldrecv14 = a;
                             let _fldval15 = down;
                             (_fldrecv14.inR = _fldval15);
                         }
-                        if ((!!(((k === "w") ? 1 : 0) || (!!(solo && ((k === "arrowup") ? 1 : 0)))))) {
+                        if ((((k === "w") ? 1 : 0) || (solo && ((k === "arrowup") ? 1 : 0)))) {
                             let _fldrecv16 = a;
                             let _fldval17 = down;
                             (_fldrecv16.inU = _fldval17);
                         }
-                        if ((!!(((k === "s") ? 1 : 0) || (!!(solo && ((k === "arrowdown") ? 1 : 0)))))) {
+                        if ((((k === "s") ? 1 : 0) || (solo && ((k === "arrowdown") ? 1 : 0)))) {
                             let _fldrecv18 = a;
                             let _fldval19 = down;
                             (_fldrecv18.inD = _fldval19);
                         }
-                        if ((!!(((k === " ") ? 1 : 0) || ((k === "spacebar") ? 1 : 0)))) {
+                        if ((((k === " ") ? 1 : 0) || ((k === "spacebar") ? 1 : 0))) {
                             let _fldrecv20 = a;
                             let _fldval21 = down;
                             (_fldrecv20.inG = _fldval21);
@@ -6105,24 +6101,24 @@ function onKey(g, raw, down) {
                             let _fldval23 = down;
                             (_fldrecv22.inMod = _fldval23);
                         }
-                        if ((!!(fresh && ((k === "q") ? 1 : 0)))) {
+                        if ((fresh && ((k === "q") ? 1 : 0))) {
                             let _fldrecv24 = a;
                             let _fldval25 = true;
                             (_fldrecv24.qSlip = _fldval25);
                         }
-                        if ((!!(fresh && ((k === "j") ? 1 : 0)))) {
+                        if ((fresh && ((k === "j") ? 1 : 0))) {
                             press(g, a, K.JAB, true);
                         }
-                        if ((!!(fresh && ((k === "k") ? 1 : 0)))) {
+                        if ((fresh && ((k === "k") ? 1 : 0))) {
                             press(g, a, K.CROSS, true);
                         }
-                        if ((!!(fresh && ((k === "l") ? 1 : 0)))) {
+                        if ((fresh && ((k === "l") ? 1 : 0))) {
                             press(g, a, K.HOOK, true);
                         }
-                        if ((!!(fresh && ((k === "i") ? 1 : 0)))) {
+                        if ((fresh && ((k === "i") ? 1 : 0))) {
                             press(g, a, K.UPPER, true);
                         }
-                        if ((!!(fresh && ((k === "u") ? 1 : 0)))) {
+                        if ((fresh && ((k === "u") ? 1 : 0))) {
                             press(g, a, K.BODY, true);
                         }
                         if (solo) {
@@ -6158,24 +6154,24 @@ function onKey(g, raw, down) {
                                 let _fldval37 = down;
                                 (_fldrecv36.inMod = _fldval37);
                             }
-                            if ((!!(fresh && (!!(((k === ".") ? 1 : 0) || ((k === ",") ? 1 : 0)))))) {
+                            if ((fresh && (((k === ".") ? 1 : 0) || ((k === ",") ? 1 : 0)))) {
                                 let _fldrecv38 = b;
                                 let _fldval39 = true;
                                 (_fldrecv38.qSlip = _fldval39);
                             }
-                            if ((!!(fresh && ((k === "1") ? 1 : 0)))) {
+                            if ((fresh && ((k === "1") ? 1 : 0))) {
                                 press(g, b, K.JAB, true);
                             }
-                            if ((!!(fresh && ((k === "2") ? 1 : 0)))) {
+                            if ((fresh && ((k === "2") ? 1 : 0))) {
                                 press(g, b, K.CROSS, true);
                             }
-                            if ((!!(fresh && ((k === "3") ? 1 : 0)))) {
+                            if ((fresh && ((k === "3") ? 1 : 0))) {
                                 press(g, b, K.HOOK, true);
                             }
-                            if ((!!(fresh && ((k === "4") ? 1 : 0)))) {
+                            if ((fresh && ((k === "4") ? 1 : 0))) {
                                 press(g, b, K.UPPER, true);
                             }
-                            if ((!!(fresh && ((k === "5") ? 1 : 0)))) {
+                            if ((fresh && ((k === "5") ? 1 : 0))) {
                                 press(g, b, K.BODY, true);
                             }
                         }
@@ -6312,7 +6308,7 @@ function drawSpots(c, g) {
 
 function drawLedBoard(c, g, y, h, sz) {
     fillRect(c, -300.0, y, 1560.0, h, 101060351);
-    let msg = "RINGUE KOF 2026  *  POWERED BY KOF  *  HOMENAGEM A REALSPORTS BOXING 1987  *  ";
+    let msg = "RINGUE KOF 90'S  *  POWERED BY KOF  *  HOMENAGEM A REALSPORTS BOXING 1987  *  ";
     let w = ((textW(msg, sz) + ((6 * sz) | 0)) | 0);
     let off = (((g.frame * 2) | 0) % w);
     let hue = (((g.frame / 3) | 0) % 360);
@@ -6520,7 +6516,7 @@ function drawHead(c, g, p, hx, hy, ko) {
         line(c, (hx + 5.0), (hy - 6.0), (hx + 11.0), hy, 2, ink);
         line(c, (hx + 11.0), (hy - 6.0), (hx + 5.0), hy, 2, ink);
     } else {
-        if ((!!(blink || (p.st === K.HIT)))) {
+        if ((blink || (p.st === K.HIT))) {
             line(c, (hx + 5.0), (hy - 2.0), (hx + 12.0), (hy - 2.0), 2, ink);
         } else {
             ellipse(c, (hx + 9.0), (hy - 3.0), 4.5, 3.4, -84215041);
@@ -6573,7 +6569,7 @@ function drawFighter(c, g, p) {
         }
         let _scopedVar$ang = (-1.52 * _scopedVar$u);
         let _scopedVar$bounce = 0.0;
-        if ((!!(((p.st === K.FALL) & (p.stT > 22)) && (p.stT < 34)))) {
+        if ((((p.st === K.FALL) & (p.stT > 22)) & (p.stT < 34))) {
             _scopedVar$bounce = ((-sn(((toD(((p.stT - 22) | 0)) / 12.0) * K.PI))) * 8.0);
         }
         kofUiCanvasTransform(c, cs(_scopedVar$ang), sn(_scopedVar$ang), (-sn(_scopedVar$ang)), cs(_scopedVar$ang), (-30.0 * _scopedVar$u), ((-14.0 * _scopedVar$u) + _scopedVar$bounce));
@@ -6616,7 +6612,7 @@ function drawFighter(c, g, p) {
     let gry = ((-152.0 + bob) + dip);
     let dirF = 1.0;
     let dirR = 1.0;
-    if ((!!(p.inG && ((p.st === K.IDLE) | (p.st === K.BLOCKED))))) {
+    if ((p.inG && ((p.st === K.IDLE) | (p.st === K.BLOCKED)))) {
         gfx = (28.0 + lx);
         gfy = (-180.0 + bob);
         grx = (22.0 + lx);
@@ -6666,7 +6662,7 @@ function drawFighter(c, g, p) {
         grx = -10.0;
         gry = -100.0;
     }
-    drawArm(c, srx, sry, grx, gry, dirR, dark, shade(glove, 85), (!!((!!((!!(p.star && (p.st === K.PUNCH))) && (p.punch !== K.JAB))) && (p.punch !== K.HOOK))), g.frame);
+    drawArm(c, srx, sry, grx, gry, dirR, dark, shade(glove, 85), (((p.star && (p.st === K.PUNCH)) && (p.punch !== K.JAB)) && (p.punch !== K.HOOK)), g.frame);
     fillQuad(c, toI((neckX - 26.0)), toI((neckY + 2.0)), toI((neckX + 24.0)), toI((neckY + 4.0)), toI(((lx * 0.4) + 20.0)), toI((hipY + 4.0)), toI(((lx * 0.4) - 20.0)), toI((hipY + 4.0)), dark);
     fillQuad(c, toI((neckX - 21.0)), toI((neckY + 5.0)), toI((neckX + 22.0)), toI((neckY + 6.0)), toI(((lx * 0.4) + 17.0)), toI((hipY + 2.0)), toI(((lx * 0.4) - 15.0)), toI((hipY + 2.0)), skin);
     alpha(c, 0.22);
@@ -6684,7 +6680,7 @@ function drawFighter(c, g, p) {
     let hx = (((neckX + 8.0) - (p.snap * 14.0)) + slipX);
     let hy = (((neckY - 26.0) + slipY) - (p.snap * 3.0));
     drawHead(c, g, p, hx, hy, ko);
-    drawArm(c, sfx, sfy, gfx, gfy, dirF, skin, glove, (!!((!!(p.star && (p.st === K.PUNCH))) && ((p.punch === K.JAB) | (p.punch === K.HOOK)))), g.frame);
+    drawArm(c, sfx, sfy, gfx, gfy, dirF, skin, glove, ((p.star && (p.st === K.PUNCH)) && ((p.punch === K.JAB) | (p.punch === K.HOOK))), g.frame);
     kofUiCanvasRestore(c);
     return;
 }
@@ -6924,7 +6920,7 @@ function drawHud(c, g) {
     drawFighterHud(c, g, g.a, false);
     drawFighterHud(c, g, g.b, true);
     drawTimer(c, g);
-    if ((!!(((g.state === K.FIGHT) & (g.round === 1)) && (g.clock > ((g.roundLen - 420) | 0))))) {
+    if ((((g.state === K.FIGHT) & (g.round === 1)) & (g.clock > ((g.roundLen - 420) | 0)))) {
         let _scopedVar$msg = "J JAB  K DIRETO  L GANCHO  I UPPER  U CORPO  ESPACO GUARDA  Q ESQUIVA  R ESPECIAL";
         alpha(c, 0.8);
         panel(c, 40.0, 506.0, 880.0, 26.0, 0.7);
@@ -6961,11 +6957,11 @@ function drawDown(c, g) {
     if ((g.downWho === 2)) {
         p = g.b;
     }
-    if ((!!(((p.stT >= 45) & (g.count > 0)) && (p.kd < 3)))) {
+    if ((((p.stT >= 45) & (g.count > 0)) & (p.kd < 3))) {
         let _scopedVar$n = (String("") + String(g.count));
         textGlow(c, _scopedVar$n, 480, 120, 16, 7, -1, -12829441);
     }
-    if ((!!((!!(p.human && (p.stT >= 45))) && (p.kd < 3)))) {
+    if (((p.human && (p.stT >= 45)) && (p.kd < 3))) {
         panel(c, 250.0, 430.0, 460.0, 92.0, 0.75);
         textC(c, "APERTE UM SOCO NA HORA CERTA", 480, 440, 2, 2, -1);
         let _scopedVar$bx = 290.0;
@@ -7117,7 +7113,7 @@ function drawTitle(c, g) {
     let t = toD(g.frame);
     let y0 = ((70 + toI((sn((t * 0.03)) * 4.0))) | 0);
     textGlow(c, "RINGUE KOF", 480, y0, 14, 6, -1, -13464321);
-    textGlow(c, "2026", 480, ((y0 + 104) | 0), 12, 6, 2028732415, 1014562815);
+    textGlow(c, "90'S", 480, ((y0 + 104) | 0), 12, 6, 2028732415, 1014562815);
     panel(c, 176.0, 256.0, 608.0, 26.0, 0.85);
     textC(c, "HOMENAGEM A REALSPORTS BOXING - ATARI 2600 - 1987", 480, 262, 2, 2, -589498881);
     if ((g.loaded ? 0 : 1)) {
@@ -7326,8 +7322,8 @@ function main() {
     let _fldval12 = -1;
     (_fldrecv11.face = _fldval12);
     let c = kofUiCanvasNew(K.W, K.H);
-    let w = kofUiWindowNew("Ringue KOF 2026");
-    kofUiWindowSetTitle(w, "Ringue KOF 2026 - Powered by Kof");
+    let w = kofUiWindowNew("Ringue KOF 90's");
+    kofUiWindowSetTitle(w, "Ringue KOF 90's - Powered by Kof");
     let mute = renderSnd(newSnd(0.02, 0.0), g.r);
     let c0 = kofUiAudioNew(mute);
     let c1 = kofUiAudioNew(mute);
@@ -7442,7 +7438,7 @@ function main() {
     kofUiWidgetOn(root, "keyup", new Lambda43(g));
     kofUiWindowBind(w, root);
     kofTimeInterval(16, new Lambda44(g, c, c0, c1, c2, c3, c4, mus, amb));
-    kofPrintln(String("Ringue KOF 2026 pronto. Powered by Kof."));
+    kofPrintln(String("Ringue KOF 90's pronto. Powered by Kof."));
     kofUiWindowShow(w);
     return;
 }

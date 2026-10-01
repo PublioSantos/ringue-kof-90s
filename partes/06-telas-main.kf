@@ -258,7 +258,7 @@ drawTitle(Canvas c, Game g) {
     var t = toD(g.frame)
     var y0 = 70 + toI(sn(t * 0.03) * 4.0)
     textGlow(c, "RINGUE KOF", 480, y0, 14, 6, Color(255, 255, 255), Color(255, 50, 140))
-    textGlow(c, "2026", 480, y0 + 104, 12, 6, Color(120, 235, 255), Color(60, 120, 255))
+    textGlow(c, "90'S", 480, y0 + 104, 12, 6, Color(120, 235, 255), Color(60, 120, 255))
     panel(c, 176.0, 256.0, 608.0, 26.0, 0.85)
     textC(c, "HOMENAGEM A REALSPORTS BOXING - ATARI 2600 - 1987", 480, 262, 2, 2, Color(220, 220, 245))
     if (!g.loaded) {
@@ -363,8 +363,8 @@ main() {
     g.b.x = 630.0
     g.b.face = -1
     var c = Canvas(K.W, K.H)
-    var w = Window("Ringue KOF 2026")
-    w.title = "Ringue KOF 2026 - Powered by Kof"
+    var w = Window("Ringue KOF 90's")
+    w.title = "Ringue KOF 90's - Powered by Kof"
 
     // canais de audio (5 efeitos + trilha + ambiente); fonte inicial muda
     var mute = renderSnd(newSnd(0.02, 0.0), g.r)
@@ -456,6 +456,6 @@ main() {
         render(c, g)
         drain(g, c0, c1, c2, c3, c4, mus, amb)
     })
-    println("Ringue KOF 2026 pronto. Powered by Kof.")
+    println("Ringue KOF 90's pronto. Powered by Kof.")
     w.show()
 }

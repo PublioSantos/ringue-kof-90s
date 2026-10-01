@@ -97,7 +97,7 @@ drawSpots(Canvas c, Game g) {
 
 drawLedBoard(Canvas c, Game g, Double y, Double h, Int sz) {
     fillRect(c, -300.0, y, 1560.0, h, Color(6, 6, 14))
-    var msg = "RINGUE KOF 2026  *  POWERED BY KOF  *  HOMENAGEM A REALSPORTS BOXING 1987  *  "
+    var msg = "RINGUE KOF 90'S  *  POWERED BY KOF  *  HOMENAGEM A REALSPORTS BOXING 1987  *  "
     var w = textW(msg, sz) + 6 * sz
     var off = (g.frame * 2) % w
     var hue = (g.frame / 3) % 360

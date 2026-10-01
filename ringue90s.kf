@@ -1,12 +1,12 @@
 // ============================================================================
-//  RINGUE KOF 2026
+//  RINGUE KOF 90'S
 //  A versao moderna da homenagem ao RealSports Boxing (Atari 2600, 1987).
 //
 //  100% Kof: fisica, IA adaptativa, juizes, camera, particulas, fonte vetorial,
 //  lutadores articulados e todo o audio (socos, gongo, torcida e trilha
 //  synthwave) sao calculados pelo proprio programa.
 //
-//  Rodar:   kof run ringue2026.kf --target js
+//  Rodar:   kof run ringue90s.kf --target js
 //  Pacote:  kof run ferramentas/empacotar.kf
 //
 //  Powered by Kof - https://github.com/KofLang
@@ -382,7 +382,7 @@ String two(Int v) {
 }
 
 // ============================================================================
-//  AUDIO 2026 - sintese aditiva/subtrativa em Kof, WAV PCM 16 bits
+//  AUDIO 90'S - sintese aditiva/subtrativa em Kof, WAV PCM 16 bits
 // ============================================================================
 
 // uma voz: oscilador + envelope + filtros
@@ -2322,7 +2322,7 @@ drawSpots(Canvas c, Game g) {
 
 drawLedBoard(Canvas c, Game g, Double y, Double h, Int sz) {
     fillRect(c, -300.0, y, 1560.0, h, Color(6, 6, 14))
-    var msg = "RINGUE KOF 2026  *  POWERED BY KOF  *  HOMENAGEM A REALSPORTS BOXING 1987  *  "
+    var msg = "RINGUE KOF 90'S  *  POWERED BY KOF  *  HOMENAGEM A REALSPORTS BOXING 1987  *  "
     var w = textW(msg, sz) + 6 * sz
     var off = (g.frame * 2) % w
     var hue = (g.frame / 3) % 360
@@ -2980,7 +2980,7 @@ drawTitle(Canvas c, Game g) {
     var t = toD(g.frame)
     var y0 = 70 + toI(sn(t * 0.03) * 4.0)
     textGlow(c, "RINGUE KOF", 480, y0, 14, 6, Color(255, 255, 255), Color(255, 50, 140))
-    textGlow(c, "2026", 480, y0 + 104, 12, 6, Color(120, 235, 255), Color(60, 120, 255))
+    textGlow(c, "90'S", 480, y0 + 104, 12, 6, Color(120, 235, 255), Color(60, 120, 255))
     panel(c, 176.0, 256.0, 608.0, 26.0, 0.85)
     textC(c, "HOMENAGEM A REALSPORTS BOXING - ATARI 2600 - 1987", 480, 262, 2, 2, Color(220, 220, 245))
     if (!g.loaded) {
@@ -3085,8 +3085,8 @@ main() {
     g.b.x = 630.0
     g.b.face = -1
     var c = Canvas(K.W, K.H)
-    var w = Window("Ringue KOF 2026")
-    w.title = "Ringue KOF 2026 - Powered by Kof"
+    var w = Window("Ringue KOF 90's")
+    w.title = "Ringue KOF 90's - Powered by Kof"
 
     // canais de audio (5 efeitos + trilha + ambiente); fonte inicial muda
     var mute = renderSnd(newSnd(0.02, 0.0), g.r)
@@ -3178,6 +3178,6 @@ main() {
         render(c, g)
         drain(g, c0, c1, c2, c3, c4, mus, amb)
     })
-    println("Ringue KOF 2026 pronto. Powered by Kof.")
+    println("Ringue KOF 90's pronto. Powered by Kof.")
     w.show()
 }
