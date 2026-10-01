@@ -1,0 +1,461 @@
+
+// ============================================================================
+//  HUD, TELAS E MAIN
+// ============================================================================
+
+class Prev {
+    static Fighter A = Fighter()
+    static Fighter B = Fighter()
+}
+
+panel(Canvas c, Double x, Double y, Double w, Double h, Double a) {
+    alpha(c, a)
+    fillQuad(c, toI(x + 10.0), toI(y), toI(x + w), toI(y), toI(x + w - 10.0), toI(y + h), toI(x), toI(y + h), Color(6, 6, 18))
+    alpha(c, a * 0.8)
+    line(c, x + 10.0, y, x + w, y, 2, Color(110, 90, 255))
+    alpha(c, 1.0)
+}
+
+// barra inclinada (paralelogramo) que enche da esquerda ou da direita
+slantBar(Canvas c, Double x, Double y, Double w, Double h, Double frac, Bool rtl, Color col) {
+    var f = clampd(frac, 0.0, 1.0)
+    var fw = w * f
+    var x0 = x
+    if (rtl) { x0 = x + w - fw }
+    if (fw < 1.0) { return }
+    fillQuad(c, toI(x0 + h * 0.5), toI(y), toI(x0 + fw + h * 0.5), toI(y), toI(x0 + fw), toI(y + h), toI(x0), toI(y + h), col)
+}
+
+Color hpColor(Int hp) {
+    var t = toD(hp) / 1000.0
+    if (t > 0.5) { return mix(Color(255, 210, 40), Color(60, 230, 120), (t - 0.5) * 2.0) }
+    return mix(Color(240, 40, 50), Color(255, 210, 40), t * 2.0)
+}
+
+drawFighterHud(Canvas c, Game g, Fighter p, Bool right) {
+    var x = 24.0
+    if (right) { x = 556.0 }
+    panel(c, x - 8.0, 10.0, 396.0, 72.0, 0.55)
+    var name = fName(p.kind)
+    if (right) {
+        text(c, name, toI(x + 380.0) - textW(name, 3), 18, 3, 2, Color(255, 255, 255))
+    } else {
+        text(c, name, toI(x), 18, 3, 2, Color(255, 255, 255))
+    }
+    // energia: trilho, dano recuperavel (cinza), atraso (branco) e vida
+    var bw = 360.0
+    var bx = x
+    if (right) { bx = x + 20.0 }
+    alpha(c, 0.7)
+    slantBar(c, bx, 38.0, bw, 14.0, 1.0, right, Color(30, 30, 44))
+    alpha(c, 1.0)
+    slantBar(c, bx, 38.0, bw, 14.0, toD(p.hp + p.rec) / 1000.0, right, Color(110, 110, 125))
+    slantBar(c, bx, 38.0, bw, 14.0, toD(p.lag) / 1000.0, right, Color(255, 245, 230))
+    slantBar(c, bx, 38.0, bw, 14.0, toD(imax(0, p.hp)) / 1000.0, right, hpColor(p.hp))
+    alpha(c, 0.25)
+    slantBar(c, bx, 38.0, bw, 4.0, toD(imax(0, p.hp)) / 1000.0, right, Color(255, 255, 255))
+    alpha(c, 1.0)
+    // folego
+    alpha(c, 0.6)
+    slantBar(c, bx, 56.0, bw * 0.8, 5.0, 1.0, right, Color(24, 30, 40))
+    alpha(c, 1.0)
+    var sx = bx
+    if (right) { sx = bx + bw * 0.2 }
+    slantBar(c, sx, 56.0, bw * 0.8, 5.0, toD(p.sta) / 1000.0, right, Color(70, 210, 255))
+    // especial em 4 segmentos
+    var seg = p.meter / 25
+    for (var i = 0; i < 4; i++) {
+        var on = i < seg
+        var col = Color(60, 54, 30)
+        if (on) { col = Color(255, 200, 50) }
+        if (p.meter >= 100 && (g.frame / 6) % 2 == 0) { col = Color(255, 250, 170) }
+        var px = bx + toD(i) * 26.0
+        if (right) { px = bx + bw - 24.0 - toD(i) * 26.0 }
+        fillQuad(c, toI(px + 3.0), 66, toI(px + 24.0), 66, toI(px + 21.0), 73, toI(px), 73, col)
+    }
+    if (p.meter >= 100) {
+        var lbl = "ESPECIAL"
+        var lx = toI(bx + 110.0)
+        if (right) { lx = toI(bx + bw - 110.0) - textW(lbl, 2) }
+        alpha(c, 0.6 + 0.4 * sn(toD(g.frame) * 0.3))
+        text(c, lbl, lx, 66, 2, 2, Color(255, 230, 90))
+        alpha(c, 1.0)
+    }
+    // quedas no round
+    for (var i = 0; i < p.kd; i++) {
+        var kx = x + 250.0 + toD(i) * 14.0
+        if (right) { kx = x + 110.0 - toD(i) * 14.0 }
+        circle(c, kx, 22.0, 5.0, Color(255, 70, 60))
+    }
+    if (p.combo >= 2 && p.comboT > 0) {
+        var ctext = "COMBO X" + p.combo
+        var cx = toI(x)
+        if (right) { cx = toI(x + 380.0) - textW(ctext, 3) }
+        text(c, ctext, cx, 92, 3, 2, Color(255, 200, 70))
+    }
+}
+
+drawTimer(Canvas c, Game g) {
+    alpha(c, 0.7)
+    circle(c, 480.0, 46.0, 36.0, Color(6, 6, 18))
+    alpha(c, 1.0)
+    var f = toD(g.clock) / toD(g.roundLen)
+    arcStroke(c, 480.0, 46.0, 31.0, 0.0, K.TAU, 5, Color(40, 40, 60))
+    var col = Color(110, 230, 255)
+    if (g.clock < 600) { col = Color(255, 80, 70) }
+    arcStroke(c, 480.0, 46.0, 31.0, -K.PI / 2.0, -K.PI / 2.0 + K.TAU * f, 5, col)
+    var secs = (g.clock + 59) / 60
+    textC(c, (secs / 60) + ":" + two(secs % 60), 480, 34, 3, 3, Color(255, 255, 255))
+    textC(c, "R" + g.round + "/" + g.rounds, 480, 58, 2, 2, Color(190, 190, 220))
+}
+
+drawHud(Canvas c, Game g) {
+    drawFighterHud(c, g, g.a, false)
+    drawFighterHud(c, g, g.b, true)
+    drawTimer(c, g)
+    if (g.state == K.FIGHT && g.round == 1 && g.clock > g.roundLen - 420) {
+        var msg = "J JAB  K DIRETO  L GANCHO  I UPPER  U CORPO  ESPACO GUARDA  Q ESQUIVA  R ESPECIAL"
+        alpha(c, 0.8)
+        panel(c, 40.0, 506.0, 880.0, 26.0, 0.7)
+        textC(c, msg, 480, 512, 2, 2, Color(220, 220, 255))
+        alpha(c, 1.0)
+    }
+}
+
+dim(Canvas c, Double a) {
+    alpha(c, a)
+    fillRect(c, 0.0, 0.0, 960.0, 540.0, Color(4, 4, 14))
+    alpha(c, 1.0)
+}
+
+drawIntro(Canvas c, Game g) {
+    var t = g.t
+    alpha(c, clampd(toD(t) / 15.0, 0.0, 1.0))
+    textGlow(c, "ROUND " + g.round, 480, 110, 9, 5, Color(255, 255, 255), Color(255, 60, 140))
+    if (g.round == 1) {
+        var vs = fName(g.a.kind) + "  VS  " + fName(g.b.kind)
+        textGlow(c, vs, 480, 182, 3, 2, Color(255, 255, 255), Color(80, 140, 255))
+    }
+    if (t > 96) { textGlow(c, "LUTEM", 480, 440, 7, 4, Color(255, 230, 90), Color(255, 120, 40)) }
+    alpha(c, 1.0)
+}
+
+drawDown(Canvas c, Game g) {
+    var p = g.a
+    if (g.downWho == 2) { p = g.b }
+    if (p.stT >= 45 && g.count > 0 && p.kd < 3) {
+        var n = "" + g.count
+        textGlow(c, n, 480, 120, 16, 7, Color(255, 255, 255), Color(255, 60, 60))
+    }
+    if (p.human && p.stT >= 45 && p.kd < 3) {
+        panel(c, 250.0, 430.0, 460.0, 92.0, 0.75)
+        textC(c, "APERTE UM SOCO NA HORA CERTA", 480, 440, 2, 2, Color(255, 255, 255))
+        var bx = 290.0
+        var bw = 380.0
+        fillRect(c, bx, 466.0, bw, 16.0, Color(40, 40, 60))
+        var z = riseZone(p)
+        alpha(c, 0.85)
+        fillRect(c, bx + bw * (0.5 - z / 2.0), 466.0, bw * z, 16.0, Color(60, 220, 120))
+        alpha(c, 1.0)
+        var mx = bx + bw * (0.5 + riseMarker(g, p) / 2.0)
+        fillRect(c, mx - 3.0, 460.0, 6.0, 28.0, Color(255, 255, 255))
+        for (var i = 0; i < 3; i++) {
+            var col = Color(60, 60, 80)
+            if (i < p.riseOk) { col = Color(255, 220, 60) }
+            circle(c, 456.0 + toD(i) * 24.0, 502.0, 7.0, col)
+        }
+    }
+}
+
+drawRoundEnd(Canvas c, Game g) {
+    dim(c, 0.45)
+    panel(c, 220.0, 110.0, 520.0, 330.0, 0.85)
+    textGlow(c, "FIM DO ROUND " + g.round, 480, 128, 6, 3, Color(255, 255, 255), Color(255, 60, 140))
+    text(c, fName(g.a.kind), 300, 190, 2, 2, trunkC(g.a.kind))
+    var nb = fName(g.b.kind)
+    text(c, nb, 690 - textW(nb, 2), 190, 2, 2, trunkC(g.b.kind))
+    var cards = listOf(g.c1, g.c2, g.c3)
+    for (var i = 0; i < 3; i++) {
+        var cd = cards.get(i)
+        var y = 220 + i * 34
+        textC(c, "JUIZ " + (i + 1), 480, y, 2, 2, Color(170, 170, 210))
+        textC(c, "" + cd.a[g.round], 330, y - 4, 4, 3, Color(255, 255, 255))
+        textC(c, "" + cd.b[g.round], 640, y - 4, 4, 3, Color(255, 255, 255))
+    }
+    var a = g.a
+    var b = g.b
+    textC(c, "GOLPES", 480, 336, 2, 2, Color(170, 170, 210))
+    textC(c, a.landedR + "/" + a.thrownR, 330, 334, 3, 2, Color(255, 255, 255))
+    textC(c, b.landedR + "/" + b.thrownR, 640, 334, 3, 2, Color(255, 255, 255))
+    textC(c, "PODER", 480, 364, 2, 2, Color(170, 170, 210))
+    textC(c, "" + a.powerR, 330, 362, 3, 2, Color(255, 255, 255))
+    textC(c, "" + b.powerR, 640, 362, 3, 2, Color(255, 255, 255))
+    textC(c, "QUEDAS", 480, 392, 2, 2, Color(170, 170, 210))
+    textC(c, "" + a.kdR, 330, 390, 3, 2, Color(255, 255, 255))
+    textC(c, "" + b.kdR, 640, 390, 3, 2, Color(255, 255, 255))
+    if ((g.frame / 20) % 2 == 0) { textC(c, "ENTER = CONTINUAR", 480, 420, 2, 2, Color(120, 255, 170)) }
+}
+
+Int pct(Int a, Int b) {
+    if (b <= 0) { return 0 }
+    return a * 100 / b
+}
+
+drawOver(Canvas c, Game g) {
+    dim(c, clampd(toD(g.t) / 90.0, 0.0, 0.5))
+    if (g.t < 50) { return }
+    panel(c, 170.0, 70.0, 620.0, 400.0, 0.85)
+    textGlow(c, g.how, 480, 86, 5, 3, Color(255, 255, 255), Color(255, 60, 60))
+    if (g.winner == 0) {
+        textGlow(c, "EMPATE", 480, 140, 8, 4, Color(255, 230, 90), Color(255, 140, 40))
+    } else {
+        var wk = g.a.kind
+        if (g.winner == 2) { wk = g.b.kind }
+        textC(c, "VENCEDOR", 480, 130, 2, 2, Color(190, 190, 220))
+        textGlow(c, fName(wk), 480, 150, 6, 3, Color(255, 255, 255), trunkC(wk))
+    }
+    if (g.sub != "") { textC(c, g.sub, 480, 200, 2, 2, Color(190, 190, 220)) }
+    var y = 226
+    if (g.how.indexOf("DECISAO") >= 0 || g.winner == 0) {
+        var cards = listOf(g.c1, g.c2, g.c3)
+        for (var i = 0; i < 3; i++) {
+            var cd = cards.get(i)
+            var s = "JUIZ " + (i + 1) + "   " + cardTotal(cd, 1, g.rounds) + " - " + cardTotal(cd, 2, g.rounds)
+            textC(c, s, 480, y, 3, 2, Color(255, 255, 255))
+            y = y + 26
+        }
+    }
+    var a = g.a
+    var b = g.b
+    y = y + 10
+    text(c, fName(a.kind), 210, y, 2, 2, trunkC(a.kind))
+    var nb = fName(b.kind)
+    text(c, nb, 750 - textW(nb, 2), y, 2, 2, trunkC(b.kind))
+    y = y + 24
+    textC(c, "CONECTADOS", 480, y, 2, 2, Color(170, 170, 210))
+    textC(c, a.landed + "/" + a.thrown + " " + pct(a.landed, a.thrown) + "%", 290, y - 2, 2, 2, Color(255, 255, 255))
+    textC(c, b.landed + "/" + b.thrown + " " + pct(b.landed, b.thrown) + "%", 670, y - 2, 2, 2, Color(255, 255, 255))
+    y = y + 24
+    textC(c, "GOLPES DE PODER", 480, y, 2, 2, Color(170, 170, 210))
+    textC(c, "" + a.power, 290, y - 2, 2, 2, Color(255, 255, 255))
+    textC(c, "" + b.power, 670, y - 2, 2, 2, Color(255, 255, 255))
+    y = y + 24
+    textC(c, "QUEDAS SOFRIDAS", 480, y, 2, 2, Color(170, 170, 210))
+    textC(c, "" + a.kdTotal, 290, y - 2, 2, 2, Color(255, 255, 255))
+    textC(c, "" + b.kdTotal, 670, y - 2, 2, 2, Color(255, 255, 255))
+    if (g.t > 60 && (g.frame / 20) % 2 == 0) { textC(c, "ENTER = NOVA LUTA", 480, 446, 3, 2, Color(120, 255, 170)) }
+}
+
+drawPause(Canvas c, Game g) {
+    dim(c, 0.6)
+    textGlow(c, "PAUSA", 480, 150, 10, 5, Color(255, 255, 255), Color(110, 90, 255))
+    textC(c, "P OU ESC = VOLTAR", 480, 260, 3, 2, Color(200, 200, 230))
+    textC(c, "N = SOM   M = MUSICA", 480, 290, 3, 2, Color(200, 200, 230))
+}
+
+drawTitle(Canvas c, Game g) {
+    dim(c, 0.4)
+    var t = toD(g.frame)
+    var y0 = 70 + toI(sn(t * 0.03) * 4.0)
+    textGlow(c, "RINGUE KOF", 480, y0, 14, 6, Color(255, 255, 255), Color(255, 50, 140))
+    textGlow(c, "2026", 480, y0 + 104, 12, 6, Color(120, 235, 255), Color(60, 120, 255))
+    panel(c, 176.0, 256.0, 608.0, 26.0, 0.85)
+    textC(c, "HOMENAGEM A REALSPORTS BOXING - ATARI 2600 - 1987", 480, 262, 2, 2, Color(220, 220, 245))
+    if (!g.loaded) {
+        var f = toD(g.mix.loaded) / toD(g.mix.total)
+        panel(c, 330.0, 300.0, 300.0, 40.0, 0.7)
+        textC(c, "GERANDO SONS EM KOF " + g.mix.loaded + "/" + g.mix.total, 480, 306, 2, 2, Color(200, 200, 255))
+        fillRect(c, 350.0, 326.0, 260.0, 6.0, Color(40, 40, 60))
+        fillRect(c, 350.0, 326.0, 260.0 * f, 6.0, Color(110, 230, 255))
+    } else if ((g.frame / 25) % 2 == 0) {
+        textGlow(c, "CLIQUE EM LUTAR! OU APERTE ENTER", 480, 312, 3, 2, Color(255, 255, 255), Color(255, 200, 60))
+    }
+    textC(c, "POWERED BY KOF - GITHUB.COM/KOFLANG", 480, 512, 2, 2, Color(130, 130, 170))
+}
+
+statBar(Canvas c, String label, Int v, Int x, Int y, Color col) {
+    text(c, label, x, y, 2, 2, Color(170, 170, 210))
+    for (var i = 0; i < 5; i++) {
+        var on = i < v
+        var cc = Color(40, 40, 60)
+        if (on) { cc = col }
+        fillQuad(c, x + 90 + i * 24 + 3, y, x + 90 + i * 24 + 22, y, x + 90 + i * 24 + 19, y + 10, x + 90 + i * 24, y + 10, cc)
+    }
+}
+
+drawCard(Canvas c, Game g, Int k, Fighter pv, Int cx, String who, String keys) {
+    panel(c, toD(cx - 210), 60.0, 420.0, 420.0, 0.82)
+    textC(c, who, cx, 74, 3, 2, Color(170, 170, 210))
+    textGlow(c, fName(k), cx, 98, 4, 3, Color(255, 255, 255), trunkC(k))
+    textC(c, fStyle(k), cx, 130, 2, 2, Color(200, 200, 235))
+    pv.kind = k
+    drawFighter(c, g, pv)
+    var labels = listOf("FORCA", "VELOC", "QUEIXO", "FOLEGO", "DEFESA")
+    for (var i = 0; i < 5; i++) {
+        statBar(c, labels.get(i), stat(k, i), cx - 150, 376 + i * 18, trunkC(k))
+    }
+    textC(c, keys, cx, 468, 2, 2, Color(140, 140, 180))
+}
+
+drawSelect(Canvas c, Game g) {
+    dim(c, 0.78)
+    textGlow(c, "ESCOLHA OS LUTADORES", 480, 20, 4, 3, Color(255, 255, 255), Color(110, 90, 255))
+    var who2 = "CPU"
+    if (g.mode == 2) { who2 = "JOGADOR 2" }
+    Prev.A.x = 240.0
+    Prev.A.z = 30.0
+    Prev.A.face = 1
+    Prev.B.x = 720.0
+    Prev.B.z = 30.0
+    Prev.B.face = -1
+    Prev.A.stT = Prev.A.stT + 1
+    Prev.B.stT = Prev.B.stT + 1
+    drawCard(c, g, g.sel1, Prev.A, 250, "JOGADOR 1", "A / D TROCA")
+    drawCard(c, g, g.sel2, Prev.B, 710, who2, "SETAS TROCAM")
+    textC(c, "VS", 480, 250, 8, 4, Color(255, 200, 60))
+    var dTxt = "NORMAL"
+    if (g.diff == 1) { dTxt = "FACIL" }
+    if (g.diff == 3) { dTxt = "CAMPEAO" }
+    var modeTxt = "1 JOGADOR"
+    if (g.mode == 2) { modeTxt = "2 JOGADORES" }
+    var snd = "SOM ON"
+    if (!g.mix.on) { snd = "SOM OFF" }
+    textC(c, modeTxt + " - " + g.rounds + " ROUNDS - CPU " + dTxt + " - " + snd, 480, 494, 2, 2, Color(120, 255, 170))
+    if ((g.frame / 25) % 2 == 0) { textC(c, "ENTER OU LUTAR! PARA COMECAR", 480, 516, 3, 2, Color(255, 255, 255)) }
+}
+
+render(Canvas c, Game g) {
+    drawWorld(c, g)
+    if (g.state == K.TITLE) {
+        drawTitle(c, g)
+        return
+    }
+    if (g.state == K.SELECT) {
+        drawSelect(c, g)
+        return
+    }
+    drawHud(c, g)
+    if (g.state == K.INTRO) { drawIntro(c, g) }
+    if (g.state == K.DOWN) { drawDown(c, g) }
+    if (g.state == K.REND) { drawRoundEnd(c, g) }
+    if (g.state == K.OVER) { drawOver(c, g) }
+    if (g.state == K.PAUSE) { drawPause(c, g) }
+    if (g.flashScr > 0) {
+        alpha(c, toD(g.flashScr) / 10.0)
+        fillRect(c, 0.0, 0.0, 960.0, 540.0, Color(255, 255, 255))
+        alpha(c, 1.0)
+    }
+    // vinheta
+    alpha(c, 0.25)
+    fillRect(c, 0.0, 0.0, 960.0, 8.0, Color(0, 0, 0))
+    fillRect(c, 0.0, 532.0, 960.0, 8.0, Color(0, 0, 0))
+    alpha(c, 1.0)
+}
+
+// ---------------------------------------------------------------- main
+main() {
+    buildTrig()
+    buildPunchTable()
+    var g = Game()
+    g.a.kind = g.sel1
+    g.b.kind = g.sel2
+    g.b.side = 2
+    g.b.x = 630.0
+    g.b.face = -1
+    var c = Canvas(K.W, K.H)
+    var w = Window("Ringue KOF 2026")
+    w.title = "Ringue KOF 2026 - Powered by Kof"
+
+    // canais de audio (5 efeitos + trilha + ambiente); fonte inicial muda
+    var mute = renderSnd(newSnd(0.02, 0.0), g.r)
+    var c0 = Audio(mute)
+    var c1 = Audio(mute)
+    var c2 = Audio(mute)
+    var c3 = Audio(mute)
+    var c4 = Audio(mute)
+    var mus = Audio(mute)
+    var amb = Audio(mute)
+
+    var bGo = Button(">> LUTAR! (ativa o teclado) <<", () -> { confirm(g) })
+    var bP1a = Button("< P1", () -> { cycleSel(g, 1, -1) })
+    var bP1b = Button("P1 >", () -> { cycleSel(g, 1, 1) })
+    var bP2a = Button("< P2/CPU", () -> { cycleSel(g, 2, -1) })
+    var bP2b = Button("P2/CPU >", () -> { cycleSel(g, 2, 1) })
+    var bMode = Button("1P / 2P", () -> {
+        if (g.state == K.SELECT) {
+            g.mode = 3 - g.mode
+            sfx(g, K.S_UI)
+        }
+    })
+    var bRounds = Button("Rounds 3/5", () -> {
+        if (g.state == K.SELECT) {
+            if (g.rounds == 3) { g.rounds = 5 } else { g.rounds = 3 }
+            sfx(g, K.S_UI)
+        }
+    })
+    var bDiff = Button("Dificuldade", () -> {
+        if (g.state == K.SELECT) {
+            g.diff = g.diff % 3 + 1
+            sfx(g, K.S_UI)
+        }
+    })
+    var bSnd = Button("Som (N)", () -> { g.mix.on = !g.mix.on })
+    var bMus = Button("Musica (M)", () -> { g.mix.music = !g.mix.music })
+    var bPause = Button("Pausa (P)", () -> { togglePause(g) })
+    var bMenu = Button("Menu", () -> {
+        g.state = K.SELECT
+        g.t = 0
+        g.mix.playCrowd = false
+        g.mix.playMusic = true
+    })
+    var row1 = Row(listOf(bGo, bP1a, bP1b, bP2a, bP2b, bMode, bRounds, bDiff, bSnd, bMus, bPause, bMenu))
+
+    // controle na tela (mouse / toque) para o jogador 1
+    var tL = Button("<", () -> {})
+    var tU = Button("^", () -> {})
+    var tD = Button("v", () -> {})
+    var tR = Button(">", () -> {})
+    var tJ = Button("JAB", () -> { press(g, g.a, K.JAB, true) })
+    var tK = Button("DIRETO", () -> { press(g, g.a, K.CROSS, true) })
+    var tH = Button("GANCHO", () -> { press(g, g.a, K.HOOK, true) })
+    var tI = Button("UPPER", () -> { press(g, g.a, K.UPPER, true) })
+    var tB = Button("CORPO", () -> { press(g, g.a, K.BODY, true) })
+    var tG = Button("GUARDA", () -> {})
+    var tS = Button("ESQUIVA", () -> { g.a.qSlip = true })
+    var tE = Button("ESPECIAL", () -> {})
+    tL.on("pointerdown", (e: Event) -> { g.a.inL = true })
+    tL.on("pointerup", (e: Event) -> { g.a.inL = false })
+    tL.on("pointerleave", (e: Event) -> { g.a.inL = false })
+    tR.on("pointerdown", (e: Event) -> { g.a.inR = true })
+    tR.on("pointerup", (e: Event) -> { g.a.inR = false })
+    tR.on("pointerleave", (e: Event) -> { g.a.inR = false })
+    tU.on("pointerdown", (e: Event) -> { g.a.inU = true })
+    tU.on("pointerup", (e: Event) -> { g.a.inU = false })
+    tU.on("pointerleave", (e: Event) -> { g.a.inU = false })
+    tD.on("pointerdown", (e: Event) -> { g.a.inD = true })
+    tD.on("pointerup", (e: Event) -> { g.a.inD = false })
+    tD.on("pointerleave", (e: Event) -> { g.a.inD = false })
+    tG.on("pointerdown", (e: Event) -> { g.a.inG = true })
+    tG.on("pointerup", (e: Event) -> { g.a.inG = false })
+    tG.on("pointerleave", (e: Event) -> { g.a.inG = false })
+    tE.on("pointerdown", (e: Event) -> { g.a.inMod = true })
+    tE.on("pointerup", (e: Event) -> { g.a.inMod = false })
+    tE.on("pointerleave", (e: Event) -> { g.a.inMod = false })
+    var row2 = Row(listOf(tL, tU, tD, tR, tJ, tK, tH, tI, tB, tG, tS, tE))
+
+    var hint = Label("Clique em LUTAR! para ativar o teclado.  P1: WASD anda, J jab, K direto, L gancho, I uppercut, U corpo, ESPACO guarda (segurar), Q esquiva, R + soco = especial.  P2: setas, 1-5 socos, 0 guarda, . esquiva, 6 especial.  Enter, P pausa, N som, M musica.")
+
+    var root = Column(listOf(c, row1, row2, hint))
+    root.on("keydown", (e: Event) -> { onKey(g, e.key(), true) })
+    root.on("keyup", (e: Event) -> { onKey(g, e.key(), false) })
+    w.bind(root)
+
+    // 60 quadros por segundo
+    time.interval(16, () -> {
+        tick(g)
+        render(c, g)
+        drain(g, c0, c1, c2, c3, c4, mus, amb)
+    })
+    println("Ringue KOF 2026 pronto. Powered by Kof.")
+    w.show()
+}

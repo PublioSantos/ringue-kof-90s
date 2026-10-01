@@ -1,0 +1,497 @@
+
+// ============================================================================
+//  GRAFICOS: ARENA, LUTADORES ARTICULADOS, PARTICULAS
+// ============================================================================
+
+// ---------------------------------------------------------------- arena
+class Pt {
+    Double x = 0.0
+    Double y = 0.0
+}
+
+Pt pt(Double x, Double y) {
+    var p = Pt()
+    p.x = x
+    p.y = y
+    return p
+}
+
+drawBackground(Canvas c, Game g) {
+    // fundo em faixas (degrade)
+    var top = Color(8, 8, 22)
+    var bot = Color(34, 16, 54)
+    for (var i = 0; i < 12; i++) {
+        var t = toD(i) / 11.0
+        fillRect(c, -300.0, -200.0 + toD(i) * 60.0, 1560.0, 62.0, mix(top, bot, t))
+    }
+    // estrutura de luzes no teto (truss)
+    line(c, -300.0, 6.0, 1260.0, 6.0, 6, Color(60, 60, 80))
+    line(c, -300.0, 20.0, 1260.0, 20.0, 3, Color(50, 50, 70))
+    for (var i = 0; i < 16; i++) {
+        var lx = -60.0 + toD(i) * 70.0
+        line(c, lx, 6.0, lx + 35.0, 20.0, 2, Color(50, 50, 70))
+        var on = (i + g.frame / 30) % 4 != 0 || g.hype > 0.6
+        var lc = Color(90, 90, 110)
+        if (on) { lc = Color(255, 245, 220) }
+        circle(c, lx + 17.0, 30.0, 6.0, Color(30, 30, 40))
+        circle(c, lx + 17.0, 32.0, 4.0, lc)
+    }
+}
+
+drawCrowd(Canvas c, Game g) {
+    var hype = g.hype
+    for (var row = 0; row < 4; row++) {
+        var y = 168.0 + toD(row) * 34.0
+        var sz = 0.7 + toD(row) * 0.13
+        var cols = 30 - row * 2
+        var dark = 26 + row * 9
+        for (var i = 0; i < cols; i++) {
+            var x = -60.0 + (toD(i) + toD(row % 2) * 0.5) * (1080.0 / toD(cols))
+            var seed = (i * 37 + row * 101) % 17
+            var bob = sn(toD(g.frame) * (0.08 + hype * 0.12) + toD(seed)) * (1.0 + hype * 5.0)
+            var col = Color(dark + seed, dark - 6 + seed / 2, dark + 22 + seed)
+            circle(c, x, y + 26.0 * sz, 15.0 * sz, col)
+            circle(c, x, y + bob * sz, 9.0 * sz, col)
+            // bracos para cima quando a torcida vibra
+            if (hype > 0.55 && (seed + g.frame / 20) % 5 == 0) {
+                limb(c, x - 8.0 * sz, y + 18.0 * sz, x - 13.0 * sz, y - 14.0 * sz + bob, toI(5.0 * sz), col)
+                limb(c, x + 8.0 * sz, y + 18.0 * sz, x + 13.0 * sz, y - 14.0 * sz + bob, toI(5.0 * sz), col)
+            }
+        }
+    }
+    // celulares e flashes
+    var n = 6 + toI(hype * 26.0)
+    for (var k = 0; k < n; k++) {
+        var h = (k * 7919 + (g.frame / 9) * 104729) % 100000
+        var x = toD(h % 1000)
+        var y = 160.0 + toD((h / 1000) % 130)
+        var tw = (g.frame + k * 13) % 40
+        if (tw < 4) {
+            alpha(c, 0.9)
+            circle(c, x, y, 3.0, Color(255, 255, 240))
+            alpha(c, 0.25)
+            circle(c, x, y, 9.0, Color(255, 255, 240))
+        } else {
+            alpha(c, 0.35)
+            fillRect(c, x - 1.5, y - 2.5, 3.0, 5.0, Color(170, 210, 255))
+        }
+    }
+    alpha(c, 1.0)
+}
+
+drawSpots(Canvas c, Game g) {
+    for (var i = 0; i < 4; i++) {
+        var baseX = 150.0 + toD(i) * 220.0
+        var sway = sn(toD(g.frame) * 0.012 + toD(i) * 1.7) * 90.0
+        var tx = baseX + sway
+        var col = Color(170, 200, 255)
+        if (i == 1) { col = Color(255, 140, 220) }
+        if (i == 2) { col = Color(140, 255, 230) }
+        alpha(c, 0.045 + g.hype * 0.04)
+        fillTri(c, toI(baseX), -40, toI(tx - 110.0), 470, toI(tx + 110.0), 470, col)
+        alpha(c, 0.06)
+        ellipse(c, tx, 410.0, 120.0, 26.0, col)
+    }
+    alpha(c, 1.0)
+}
+
+drawLedBoard(Canvas c, Game g, Double y, Double h, Int sz) {
+    fillRect(c, -300.0, y, 1560.0, h, Color(6, 6, 14))
+    var msg = "RINGUE KOF 2026  *  POWERED BY KOF  *  HOMENAGEM A REALSPORTS BOXING 1987  *  "
+    var w = textW(msg, sz) + 6 * sz
+    var off = (g.frame * 2) % w
+    var hue = (g.frame / 3) % 360
+    var col = Color(80 + toI(70.0 * (1.0 + sn(toD(hue) * 0.0175))), 200, 255)
+    var ty = toI(y + (h - toD(6 * sz)) / 2.0)
+    var x0 = -off
+    while (x0 > -300) { x0 = x0 - w }
+    var xx = x0
+    while (xx < 1260) {
+        text(c, msg, xx, ty, sz, imax(1, sz / 2 + 1), col)
+        xx = xx + w
+    }
+    alpha(c, 0.15)
+    fillRect(c, -300.0, y, 1560.0, 2.0, Color(255, 255, 255))
+    alpha(c, 1.0)
+}
+
+drawRingBack(Canvas c, Game g) {
+    alpha(c, 0.75)
+    drawLedBoard(c, g, 298.0, 18.0, 2)
+    alpha(c, 1.0)
+    // postes do fundo
+    limb(c, 190.0, 226.0, 190.0, 320.0, 9, Color(190, 190, 205))
+    limb(c, 770.0, 226.0, 770.0, 320.0, 9, Color(190, 190, 205))
+    var cols = listOf(Color(240, 240, 245), Color(220, 40, 60), Color(40, 90, 230))
+    for (var i = 0; i < 3; i++) {
+        var y = 244.0 + toD(i) * 24.0
+        line(c, 190.0, y, 480.0, y + 3.0, 4, cols.get(i))
+        line(c, 480.0, y + 3.0, 770.0, y, 4, cols.get(i))
+    }
+    // tablado
+    fillQuad(c, 190, 318, 770, 318, 920, 484, 40, 484, Color(18, 52, 112))
+    fillQuad(c, 214, 324, 746, 324, 884, 474, 76, 474, Color(26, 74, 150))
+    alpha(c, 0.10)
+    textC(c, "KOF", 480, 372, 14, 6, Color(150, 200, 255))
+    alpha(c, 1.0)
+    // poca de luz sob os lutadores
+    var fs = listOf(g.a, g.b)
+    for (var p in fs) {
+        alpha(c, 0.10 + g.hype * 0.05)
+        ellipse(c, p.x, floorY(p.z) + 2.0, 95.0, 22.0, Color(200, 220, 255))
+    }
+    alpha(c, 0.35)
+    line(c, 40.0, 484.0, 920.0, 484.0, 3, Color(120, 170, 255))
+    alpha(c, 1.0)
+}
+
+drawRingFront(Canvas c, Game g) {
+    var cols = listOf(Color(240, 240, 245), Color(220, 40, 60), Color(40, 90, 230))
+    alpha(c, 0.92)
+    for (var i = 0; i < 3; i++) {
+        var y = 392.0 + toD(i) * 27.0
+        line(c, 40.0, y, 480.0, y + 6.0, 6, cols.get(i))
+        line(c, 480.0, y + 6.0, 920.0, y, 6, cols.get(i))
+    }
+    alpha(c, 1.0)
+    limb(c, 40.0, 372.0, 40.0, 500.0, 14, Color(200, 200, 215))
+    limb(c, 920.0, 372.0, 920.0, 500.0, 14, Color(200, 200, 215))
+    // protetores dos corners
+    fillRect(c, 30.0, 380.0, 20.0, 74.0, Color(220, 40, 60))
+    fillRect(c, 910.0, 380.0, 20.0, 74.0, Color(40, 90, 230))
+    alpha(c, 0.3)
+    fillRect(c, 32.0, 382.0, 5.0, 70.0, Color(255, 255, 255))
+    fillRect(c, 912.0, 382.0, 5.0, 70.0, Color(255, 255, 255))
+    alpha(c, 1.0)
+    // saia do ringue com LED
+    fillRect(c, -300.0, 486.0, 1560.0, 140.0, Color(10, 8, 20))
+    drawLedBoard(c, g, 496.0, 34.0, 3)
+}
+
+// ---------------------------------------------------------------- lutador
+// cotovelo por cinemática inversa (dois segmentos iguais)
+Pt elbow(Double sx, Double sy, Double hx, Double hy, Double len, Double dir) {
+    var dx = hx - sx
+    var dy = hy - sy
+    var d = math.sqrt(dx * dx + dy * dy)
+    if (d < 1.0) { d = 1.0 }
+    var maxd = len * 2.0 - 0.5
+    if (d > maxd) { d = maxd }
+    var a = d / 2.0
+    var h = math.sqrt(clampd(len * len - a * a, 0.0, 99999.0))
+    var bx = sx + dx * a / d
+    var by = sy + dy * a / d
+    return pt(bx - dy / d * h * dir, by + dx / d * h * dir)
+}
+
+drawArm(Canvas c, Double sx, Double sy, Double gx, Double gy, Double dir, Color skin, Color glove, Bool star, Int frame) {
+    var e = elbow(sx, sy, gx, gy, 31.0, dir)
+    limb(c, sx, sy, e.x, e.y, 13, skin)
+    limb(c, e.x, e.y, gx, gy, 11, skin)
+    if (star) {
+        alpha(c, 0.35 + 0.25 * sn(toD(frame) * 0.6))
+        circle(c, gx, gy, 24.0, Color(255, 220, 60))
+        alpha(c, 1.0)
+    }
+    circle(c, gx - 2.0, gy, 8.0, Color(245, 245, 245))
+    circle(c, gx + 3.0, gy, 13.0, shade(glove, 70))
+    circle(c, gx + 4.0, gy - 1.0, 11.5, glove)
+    alpha(c, 0.45)
+    circle(c, gx + 7.0, gy - 5.0, 4.0, Color(255, 255, 255))
+    alpha(c, 1.0)
+}
+
+Double punchExt(Fighter p) {
+    var s = toD(startupOf(p))
+    var a = toD(pAct(p.punch))
+    var r = toD(pRec(p.punch))
+    var t = toD(p.stT)
+    if (t < s) { return easeOut(t / s) }
+    if (t < s + a) { return 1.0 }
+    return 1.0 - easeOut((t - s - a) / r)
+}
+
+drawHead(Canvas c, Game g, Fighter p, Double hx, Double hy, Bool ko) {
+    var k = p.kind
+    var skin = skinC(k)
+    var hair = hairC(k)
+    var dark = shade(skin, 72)
+    var ink = Color(18, 16, 22)
+    // pescoco
+    limb(c, hx - 6.0, hy + 12.0, hx - 8.0, hy + 26.0, 14, dark)
+    // cabeca com sombreamento
+    circle(c, hx, hy, 18.0, dark)
+    circle(c, hx + 1.5, hy - 1.5, 16.5, skin)
+    // cabelo / barba por lutador
+    if (k == 0) {
+        c.setFill(hair)
+        c.beginPath()
+        c.arc(toI(hx), toI(hy - 1.0), 18, 3.3, 6.2)
+        c.fill()
+        circle(c, hx - 12.0, hy - 4.0, 7.0, hair)
+    } else if (k == 1) {
+        alpha(c, 0.35)
+        circle(c, hx + 5.0, hy - 9.0, 5.0, Color(255, 255, 255))
+        alpha(c, 1.0)
+        c.setFill(hair)
+        c.beginPath()
+        c.arc(toI(hx + 3.0), toI(hy + 4.0), 16, 0.2, 2.6)
+        c.fill()
+    } else if (k == 2) {
+        for (var i = 0; i < 5; i++) {
+            var bx = hx - 14.0 + toD(i) * 7.0
+            fillTri(c, toI(bx - 5.0), toI(hy - 8.0), toI(bx + 5.0), toI(hy - 8.0), toI(bx + 2.0), toI(hy - 27.0 + toD(i % 2) * 4.0), hair)
+        }
+        c.setFill(hair)
+        c.beginPath()
+        c.arc(toI(hx), toI(hy - 2.0), 18, 3.3, 6.2)
+        c.fill()
+    } else {
+        c.setFill(hair)
+        c.beginPath()
+        c.arc(toI(hx), toI(hy - 2.0), 17, 3.4, 6.1)
+        c.fill()
+        alpha(c, 0.5)
+        c.setFill(hair)
+        c.beginPath()
+        c.arc(toI(hx + 2.0), toI(hy + 5.0), 15, 0.3, 2.4)
+        c.fill()
+        alpha(c, 1.0)
+    }
+    // orelha
+    circle(c, hx - 5.0, hy + 1.0, 4.5, dark)
+    // nariz
+    fillTri(c, toI(hx + 15.0), toI(hy - 2.0), toI(hx + 21.0), toI(hy + 5.0), toI(hx + 14.0), toI(hy + 6.0), skin)
+    // olho (perfil) - fechado se piscando, atordoado ou nocauteado
+    var blink = (g.frame + k * 53) % 150 < 4
+    if (ko) {
+        line(c, hx + 5.0, hy - 6.0, hx + 11.0, hy, 2, ink)
+        line(c, hx + 11.0, hy - 6.0, hx + 5.0, hy, 2, ink)
+    } else if (blink || p.st == K.HIT) {
+        line(c, hx + 5.0, hy - 2.0, hx + 12.0, hy - 2.0, 2, ink)
+    } else {
+        ellipse(c, hx + 9.0, hy - 3.0, 4.5, 3.4, Color(250, 250, 250))
+        circle(c, hx + 10.5, hy - 3.0, 2.2, ink)
+    }
+    // sobrancelha (bravo no ataque, erguida quando apanha)
+    var by = -9.0
+    var tilt = 2.0
+    if (p.st == K.PUNCH) { tilt = 4.0 }
+    if (p.st == K.HIT) {
+        by = -11.0
+        tilt = -2.0
+    }
+    line(c, hx + 3.0, hy + by - tilt / 2.0, hx + 14.0, hy + by + tilt / 2.0, 3, shade(hair, 90))
+    // boca: protetor bucal aparece quando apanha
+    if (p.st == K.HIT && p.stT < 8) {
+        fillRect(c, hx + 8.0, hy + 7.0, 8.0, 4.0, Color(240, 240, 255))
+    } else {
+        line(c, hx + 9.0, hy + 9.0, hx + 14.0, hy + 8.0, 2, shade(skin, 55))
+    }
+    if (p.flash > 0) {
+        alpha(c, toD(p.flash) / 8.0)
+        circle(c, hx, hy, 18.0, Color(255, 255, 255))
+        alpha(c, 1.0)
+    }
+}
+
+drawFighter(Canvas c, Game g, Fighter p) {
+    var sc = scaleZ(p.z)
+    var fx = p.x
+    var fy = floorY(p.z)
+    var k = p.kind
+    var skin = skinC(k)
+    var dark = shade(skin, 72)
+    var trunk = trunkC(k)
+    var trim = trimC(k)
+    var glove = gloveC(k)
+    // sombra
+    alpha(c, 0.4)
+    ellipse(c, fx, fy + 2.0, 50.0 * sc, 11.0 * sc, Color(0, 0, 10))
+    alpha(c, 1.0)
+    c.save()
+    c.transform(toD(p.face) * sc, 0.0, 0.0, sc, fx, fy)
+    // queda / levantar: gira o corpo em torno dos pes
+    var ko = false
+    if (p.st == K.FALL || p.st == K.RISE) {
+        var u = easeOut(toD(p.stT) / 26.0)
+        if (p.st == K.RISE) { u = 1.0 - easeOut(toD(p.stT) / 32.0) }
+        var ang = -1.52 * u
+        var bounce = 0.0
+        if (p.st == K.FALL && p.stT > 22 && p.stT < 34) { bounce = -sn(toD(p.stT - 22) / 12.0 * K.PI) * 8.0 }
+        c.transform(cs(ang), sn(ang), -sn(ang), cs(ang), -30.0 * u, -14.0 * u + bounce)
+        ko = p.st == K.FALL && p.stT > 20
+    }
+    var bob = sn(toD(g.frame) * 0.11 + toD(k)) * 2.5
+    var walk = sn(p.walk)
+    var lx = p.lean * 10.0
+    var dip = 0.0
+    var slipX = 0.0
+    var slipY = 0.0
+    if (p.st == K.SLIP) {
+        var u2 = sn(toD(p.stT) / 22.0 * K.PI)
+        slipX = -22.0 * u2
+        slipY = 10.0 * u2
+    }
+    if (p.st == K.PUNCH && (p.punch == K.BODY || p.punch == K.UPPER)) { dip = 7.0 * punchExt(p) }
+    if (p.st == K.WIN) { bob = -dabs(sn(toD(p.stT) * 0.15)) * 10.0 }
+    var hipY = -94.0 + bob * 0.4 + dip
+    var neckX = lx + 4.0 + slipX * 0.6
+    var neckY = -150.0 + bob + dip + slipY * 0.6
+    // pernas
+    var bfx = -22.0 + walk * 7.0
+    var ffx = 22.0 - walk * 7.0
+    var bk = elbow(-9.0, hipY + 14.0, bfx, -4.0, 30.0, 1.0)
+    var fk = elbow(9.0, hipY + 14.0, ffx, -4.0, 30.0, 1.0)
+    limb(c, -9.0, hipY + 14.0, bk.x, bk.y, 16, dark)
+    limb(c, bk.x, bk.y, bfx, -4.0, 13, dark)
+    limb(c, bfx - 2.0, -3.0, bfx + 12.0, -3.0, 9, Color(30, 30, 36))
+    // braco de tras (atras do tronco)
+    var srx = neckX - 12.0
+    var sry = neckY + 4.0
+    var sfx = neckX + 12.0
+    var sfy = neckY + 6.0
+    var gfx = 36.0 + lx
+    var gfy = -164.0 + bob + dip
+    var grx = 22.0 + lx
+    var gry = -152.0 + bob + dip
+    var dirF = 1.0
+    var dirR = 1.0
+    if (p.inG && (p.st == K.IDLE || p.st == K.BLOCKED)) {
+        gfx = 28.0 + lx
+        gfy = -180.0 + bob
+        grx = 22.0 + lx
+        gry = -170.0 + bob
+    }
+    if (p.st == K.PUNCH) {
+        var e = punchExt(p)
+        if (p.punch == K.JAB) {
+            gfx = lerpd(gfx, 44.0 + 92.0, e)
+            gfy = lerpd(gfy, -168.0, e)
+        } else if (p.punch == K.CROSS) {
+            grx = lerpd(grx, 48.0 + 96.0, e)
+            gry = lerpd(gry, -166.0, e)
+        } else if (p.punch == K.HOOK) {
+            gfx = lerpd(gfx, 104.0, e)
+            gfy = lerpd(gfy, -168.0, e) - sn(e * K.PI) * 20.0
+            dirF = -1.0
+        } else if (p.punch == K.UPPER) {
+            grx = lerpd(26.0, 88.0, e)
+            gry = lerpd(-118.0, -196.0, e)
+        } else {
+            grx = lerpd(grx, 46.0 + 80.0, e)
+            gry = lerpd(gry, -124.0, e)
+        }
+    }
+    if (p.st == K.WIN) {
+        gfx = 22.0
+        gfy = -232.0 + bob
+        grx = -8.0
+        gry = -228.0 + bob
+        dirF = -1.0
+        dirR = -1.0
+    }
+    if (p.st == K.HIT) {
+        gfx = gfx - 10.0
+        grx = grx - 8.0
+    }
+    if (ko) {
+        gfx = 10.0
+        gfy = -110.0
+        grx = -10.0
+        gry = -100.0
+    }
+    drawArm(c, srx, sry, grx, gry, dirR, dark, shade(glove, 85), p.star && p.st == K.PUNCH && p.punch != K.JAB && p.punch != K.HOOK, g.frame)
+    // tronco com sombreamento
+    fillQuad(c, toI(neckX - 26.0), toI(neckY + 2.0), toI(neckX + 24.0), toI(neckY + 4.0), toI(lx * 0.4 + 20.0), toI(hipY + 4.0), toI(lx * 0.4 - 20.0), toI(hipY + 4.0), dark)
+    fillQuad(c, toI(neckX - 21.0), toI(neckY + 5.0), toI(neckX + 22.0), toI(neckY + 6.0), toI(lx * 0.4 + 17.0), toI(hipY + 2.0), toI(lx * 0.4 - 15.0), toI(hipY + 2.0), skin)
+    alpha(c, 0.22)
+    line(c, neckX + 2.0, neckY + 18.0, lx * 0.4 + 2.0, hipY - 6.0, 2, shade(skin, 50))
+    ellipse(c, neckX + 8.0, neckY + 16.0, 9.0, 6.0, Color(255, 255, 255))
+    alpha(c, 1.0)
+    // calcao
+    fillQuad(c, toI(lx * 0.4 - 23.0), toI(hipY - 4.0), toI(lx * 0.4 + 23.0), toI(hipY - 4.0), toI(28.0), toI(hipY + 34.0), toI(-28.0), toI(hipY + 34.0), trunk)
+    fillRect(c, lx * 0.4 - 23.0, hipY - 6.0, 46.0, 7.0, trim)
+    alpha(c, 0.25)
+    fillQuad(c, toI(lx * 0.4 - 23.0), toI(hipY - 4.0), toI(lx * 0.4 - 10.0), toI(hipY - 4.0), toI(-14.0), toI(hipY + 34.0), toI(-28.0), toI(hipY + 34.0), Color(0, 0, 0))
+    alpha(c, 1.0)
+    // perna da frente
+    limb(c, 9.0, hipY + 14.0, fk.x, fk.y, 16, skin)
+    limb(c, fk.x, fk.y, ffx, -4.0, 13, skin)
+    limb(c, ffx - 2.0, -3.0, ffx + 13.0, -3.0, 10, Color(245, 245, 250))
+    // cabeca
+    var hx = neckX + 8.0 - p.snap * 14.0 + slipX
+    var hy = neckY - 26.0 + slipY - p.snap * 3.0
+    drawHead(c, g, p, hx, hy, ko)
+    // braco da frente
+    drawArm(c, sfx, sfy, gfx, gfy, dirF, skin, glove, p.star && p.st == K.PUNCH && (p.punch == K.JAB || p.punch == K.HOOK), g.frame)
+    c.restore()
+}
+
+// ---------------------------------------------------------------- particulas e textos
+drawParts(Canvas c, Game g) {
+    for (var p in g.parts) {
+        var f = 1.0 - toD(p.t) / toD(p.life)
+        alpha(c, f)
+        if (p.kind == 0) {
+            circle(c, p.x, p.y, p.r, p.col)
+        } else if (p.kind == 1) {
+            line(c, p.x, p.y, p.x - p.vx * 3.0, p.y - p.vy * 3.0, 2, p.col)
+        } else {
+            circle(c, p.x, p.y, p.r * (2.0 + toD(p.t) / 6.0), p.col)
+        }
+    }
+    alpha(c, 1.0)
+}
+
+drawPops(Canvas c, Game g) {
+    for (var q in g.pops) {
+        var a = 1.0
+        if (q.t > q.life - 20) { a = toD(q.life - q.t) / 20.0 }
+        var sz = q.sz
+        if (q.t < 6) { sz = imax(1, q.sz * (q.t + 2) / 8) }
+        alpha(c, a)
+        textGlow(c, q.s, toI(q.x), toI(q.y), sz, imax(2, sz / 2 + 1), Color(255, 255, 255), q.col)
+    }
+    alpha(c, 1.0)
+}
+
+drawWorld(Canvas c, Game g) {
+    var z = g.zoom
+    var sx = (rndd(g.r) - 0.5) * g.shake * 2.0
+    var sy = (rndd(g.r) - 0.5) * g.shake * 2.0
+    c.save()
+    c.transform(z, 0.0, 0.0, z, 480.0 - g.camX * z + sx, 300.0 - g.camY * z + sy)
+    drawBackground(c, g)
+    drawSpots(c, g)
+    drawCrowd(c, g)
+    drawRingBack(c, g)
+    if (g.state == K.TITLE) {
+        // os dois lutadores se encarando na abertura
+        Prev.A.kind = g.sel1
+        Prev.B.kind = g.sel2
+        Prev.A.x = 400.0
+        Prev.A.z = 62.0
+        Prev.A.face = 1
+        Prev.B.x = 560.0
+        Prev.B.z = 62.0
+        Prev.B.face = -1
+        Prev.A.inG = true
+        Prev.B.inG = true
+        drawFighter(c, g, Prev.A)
+        drawFighter(c, g, Prev.B)
+    }
+    if (g.state != K.TITLE && g.state != K.SELECT) {
+        if (g.a.z <= g.b.z) {
+            drawFighter(c, g, g.a)
+            drawFighter(c, g, g.b)
+        } else {
+            drawFighter(c, g, g.b)
+            drawFighter(c, g, g.a)
+        }
+    }
+    drawRingFront(c, g)
+    drawParts(c, g)
+    drawPops(c, g)
+    c.restore()
+}

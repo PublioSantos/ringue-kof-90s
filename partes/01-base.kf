@@ -1,0 +1,382 @@
+// ============================================================================
+//  RINGUE KOF 2026
+//  A versao moderna da homenagem ao RealSports Boxing (Atari 2600, 1987).
+//
+//  100% Kof: fisica, IA adaptativa, juizes, camera, particulas, fonte vetorial,
+//  lutadores articulados e todo o audio (socos, gongo, torcida e trilha
+//  synthwave) sao calculados pelo proprio programa.
+//
+//  Rodar:   kof run ringue2026.kf --target js
+//  Pacote:  kof run ferramentas/empacotar.kf
+//
+//  Powered by Kof - https://github.com/KofLang
+// ============================================================================
+
+// ---------------------------------------------------------------- constantes
+class K {
+    static Int W = 960
+    static Int H = 540
+    // telas
+    static Int TITLE = 0
+    static Int SELECT = 1
+    static Int INTRO = 2
+    static Int FIGHT = 3
+    static Int DOWN = 4
+    static Int REND = 5
+    static Int OVER = 6
+    static Int PAUSE = 7
+    // estados do lutador
+    static Int IDLE = 0
+    static Int PUNCH = 1
+    static Int HIT = 2
+    static Int SLIP = 3
+    static Int FALL = 4
+    static Int RISE = 5
+    static Int WIN = 6
+    static Int BLOCKED = 7
+    // golpes
+    static Int JAB = 1
+    static Int CROSS = 2
+    static Int HOOK = 3
+    static Int UPPER = 4
+    static Int BODY = 5
+    // sons
+    static Int S_JAB = 0
+    static Int S_CROSS = 1
+    static Int S_HOOK = 2
+    static Int S_UPPER = 3
+    static Int S_BODY = 4
+    static Int S_BLOCK = 5
+    static Int S_WHOOSH = 6
+    static Int S_BELL = 7
+    static Int S_KD = 8
+    static Int S_CHEER = 9
+    static Int S_TICK = 10
+    static Int S_UI = 11
+    static Int S_OK = 12
+    static Int S_PING = 13
+    static Int S_BUZZ = 14
+    static Int S_STAR = 15
+    static Int S_SLIP = 16
+    static Int S_HEART = 17
+    static Int S_MUSIC = 18
+    static Int S_CROWD = 19
+    // matematica
+    static Double PI = 3.14159265358979
+    static Double TAU = 6.28318530717958
+    static Int TN = 4096
+    // ringue (mundo)
+    static Int XMIN = 205
+    static Int XMAX = 755
+}
+
+class Tab {
+    static List<Double> SIN = listOf<Double>()
+}
+
+// ---------------------------------------------------------------- utilidades
+Int iabs(Int v) {
+    if (v < 0) { return -v }
+    return v
+}
+
+Int imin(Int a, Int b) {
+    if (a < b) { return a }
+    return b
+}
+
+Int imax(Int a, Int b) {
+    if (a > b) { return a }
+    return b
+}
+
+Int clampi(Int v, Int lo, Int hi) {
+    if (v < lo) { return lo }
+    if (v > hi) { return hi }
+    return v
+}
+
+Double dabs(Double v) {
+    if (v < 0.0) { return -v }
+    return v
+}
+
+Double clampd(Double v, Double lo, Double hi) {
+    if (v < lo) { return lo }
+    if (v > hi) { return hi }
+    return v
+}
+
+Double lerpd(Double a, Double b, Double t) {
+    return a + (b - a) * t
+}
+
+Int toI(Double v) {
+    return v as Int
+}
+
+Double toD(Int v) {
+    return v * 1.0
+}
+
+// suaviza 0..1 (ease-out cubico)
+Double easeOut(Double t) {
+    var u = 1.0 - clampd(t, 0.0, 1.0)
+    return 1.0 - u * u * u
+}
+
+// seno por serie de Taylor (so na criacao da tabela)
+Double taylorSin(Double x) {
+    var a = x
+    while (a > K.PI) { a = a - K.TAU }
+    while (a < -K.PI) { a = a + K.TAU }
+    var a2 = a * a
+    return a * (1.0 - a2 / 6.0 * (1.0 - a2 / 20.0 * (1.0 - a2 / 42.0 * (1.0 - a2 / 72.0 * (1.0 - a2 / 110.0)))))
+}
+
+buildTrig() {
+    for (var i = 0; i < K.TN; i++) {
+        Tab.SIN.add(taylorSin(toD(i) * K.TAU / toD(K.TN)))
+    }
+}
+
+Double sn(Double a) {
+    var idx = toI(a / K.TAU * toD(K.TN)) % K.TN
+    if (idx < 0) { idx = idx + K.TN }
+    return Tab.SIN.get(idx)
+}
+
+Double cs(Double a) {
+    return sn(a + K.PI / 2.0)
+}
+
+// gerador pseudo-aleatorio deterministico (Park-Miller, 31 bits)
+class Rng {
+    Int s = 20261987
+}
+
+Int rnd(Rng r, Int n) {
+    r.s = (r.s * 16807) % 2147483647
+    if (r.s <= 0) { r.s = r.s + 2147483646 }
+    if (n <= 0) { return 0 }
+    return (r.s / 7) % n
+}
+
+Double rndd(Rng r) {
+    return toD(rnd(r, 10000)) / 10000.0
+}
+
+Color mix(Color a, Color b, Double t) {
+    var u = clampd(t, 0.0, 1.0)
+    return Color(toI(lerpd(toD(a.red()), toD(b.red()), u)),
+                 toI(lerpd(toD(a.green()), toD(b.green()), u)),
+                 toI(lerpd(toD(a.blue()), toD(b.blue()), u)))
+}
+
+Color shade(Color a, Int pct) {
+    return Color(clampi(a.red() * pct / 100, 0, 255), clampi(a.green() * pct / 100, 0, 255), clampi(a.blue() * pct / 100, 0, 255))
+}
+
+// ---------------------------------------------------------------- desenho basico
+fillRect(Canvas c, Double x, Double y, Double w, Double h, Color col) {
+    c.setFill(col)
+    c.beginPath()
+    c.moveTo(toI(x), toI(y))
+    c.lineTo(toI(x + w), toI(y))
+    c.lineTo(toI(x + w), toI(y + h))
+    c.lineTo(toI(x), toI(y + h))
+    c.closePath()
+    c.fill()
+}
+
+fillQuad(Canvas c, Int x1, Int y1, Int x2, Int y2, Int x3, Int y3, Int x4, Int y4, Color col) {
+    c.setFill(col)
+    c.beginPath()
+    c.moveTo(x1, y1)
+    c.lineTo(x2, y2)
+    c.lineTo(x3, y3)
+    c.lineTo(x4, y4)
+    c.closePath()
+    c.fill()
+}
+
+fillTri(Canvas c, Int x1, Int y1, Int x2, Int y2, Int x3, Int y3, Color col) {
+    c.setFill(col)
+    c.beginPath()
+    c.moveTo(x1, y1)
+    c.lineTo(x2, y2)
+    c.lineTo(x3, y3)
+    c.closePath()
+    c.fill()
+}
+
+circle(Canvas c, Double x, Double y, Double r, Color col) {
+    c.setFill(col)
+    c.beginPath()
+    c.arc(toI(x), toI(y), toI(r), 0.0, K.TAU)
+    c.fill()
+}
+
+ring(Canvas c, Double x, Double y, Double r, Int lw, Color col) {
+    c.setStroke(col)
+    c.setLineWidth(lw)
+    c.beginPath()
+    c.arc(toI(x), toI(y), toI(r), 0.0, K.TAU)
+    c.stroke()
+}
+
+arcStroke(Canvas c, Double x, Double y, Double r, Double a0, Double a1, Int lw, Color col) {
+    c.setStroke(col)
+    c.setLineWidth(lw)
+    c.beginPath()
+    c.arc(toI(x), toI(y), toI(r), a0, a1)
+    c.stroke()
+}
+
+line(Canvas c, Double x1, Double y1, Double x2, Double y2, Int lw, Color col) {
+    c.setStroke(col)
+    c.setLineWidth(lw)
+    c.beginPath()
+    c.moveTo(toI(x1), toI(y1))
+    c.lineTo(toI(x2), toI(y2))
+    c.stroke()
+}
+
+// membro com pontas arredondadas (linha grossa + circulos)
+limb(Canvas c, Double x1, Double y1, Double x2, Double y2, Int lw, Color col) {
+    line(c, x1, y1, x2, y2, lw, col)
+    circle(c, x1, y1, toD(lw) / 2.0, col)
+    circle(c, x2, y2, toD(lw) / 2.0, col)
+}
+
+// elipse via escala do canvas
+ellipse(Canvas c, Double x, Double y, Double rx, Double ry, Color col) {
+    c.save()
+    c.transform(1.0, 0.0, 0.0, ry / rx, x, y)
+    circle(c, 0.0, 0.0, rx, col)
+    c.restore()
+}
+
+alpha(Canvas c, Double a) {
+    c.setGlobalAlpha(clampd(a, 0.0, 1.0))
+}
+
+// ---------------------------------------------------------------- fonte vetorial
+// grade 4x6, segmentos "x1y1x2y2"; desenhada com tracos e inclinacao esportiva
+class Font {
+    static String CH = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?:-'/+%()<>*=,"
+}
+
+String glyph(String ch) {
+    if (ch == "A") { return "06020220204242460444" }
+    if (ch == "B") { return "0006003030414142423333033344444545363606" }
+    if (ch == "C") { return "4130301010010105051616363645" }
+    if (ch == "D") { return "000600303041414545363606" }
+    if (ch == "E") { return "4000000606460333" }
+    if (ch == "F") { return "400000060333" }
+    if (ch == "G") { return "413030101001010505161636364545434323" }
+    if (ch == "H") { return "000640460343" }
+    if (ch == "I") { return "103020261636" }
+    if (ch == "J") { return "10403035352626161605" }
+    if (ch == "K") { return "000640030346" }
+    if (ch == "L") { return "00060646" }
+    if (ch == "M") { return "0600002222404046" }
+    if (ch == "N") { return "060000464640" }
+    if (ch == "O") { return "10303041414545363616160505010110" }
+    if (ch == "P") { return "060000303041414242333303" }
+    if (ch == "Q") { return "103030414145453636161605050101102446" }
+    if (ch == "R") { return "0600003030414142423333032346" }
+    if (ch == "S") { return "41303010100101020213133333444445453636161605" }
+    if (ch == "T") { return "00402026" }
+    if (ch == "U") { return "00050516163636454540" }
+    if (ch == "V") { return "00262640" }
+    if (ch == "W") { return "0016162323363640" }
+    if (ch == "X") { return "00464006" }
+    if (ch == "Y") { return "002340232326" }
+    if (ch == "Z") { return "004040060646" }
+    if (ch == "0") { return "103030414145453636161605050101103115" }
+    if (ch == "1") { return "122020261636" }
+    if (ch == "2") { return "011010303041414242060646" }
+    if (ch == "3") { return "01101030304141424233331333444445453636161605" }
+    if (ch == "4") { return "300404443036" }
+    if (ch == "5") { return "4000000303333344444545363606" }
+    if (ch == "6") { return "4130301010010105051616363645454444333303" }
+    if (ch == "7") { return "00404016" }
+    if (ch == "8") { return "103030414142423333131302020101103344444545363616160505040413" }
+    if (ch == "9") { return "431313020201011010303041414545363606" }
+    if (ch == ".") { return "2526" }
+    if (ch == "!") { return "20242526" }
+    if (ch == "?") { return "0110103030414142422323242526" }
+    if (ch == ":") { return "21222425" }
+    if (ch == "-") { return "1333" }
+    if (ch == "'") { return "2021" }
+    if (ch == "/") { return "4006" }
+    if (ch == "+") { return "13332224" }
+    if (ch == "%") { return "400600013546" }
+    if (ch == "(") { return "201111151526" }
+    if (ch == ")") { return "203131353526" }
+    if (ch == "<") { return "30030336" }
+    if (ch == ">") { return "10434316" }
+    if (ch == "*") { return "11353115" }
+    if (ch == "=") { return "02420444" }
+    if (ch == ",") { return "2526" }
+    return ""
+}
+
+Int digit(String s, Int i) {
+    return "0123456789".indexOf(s.substring(i, i + 1))
+}
+
+// largura do texto em pixels para escala sz (unidade da grade)
+Int textW(String s, Int sz) {
+    return s.length() * 6 * sz - 2 * sz
+}
+
+// adiciona o texto ao caminho atual (um unico stroke por chamada)
+textPath(Canvas c, String s, Int x, Int y, Int sz) {
+    var n = s.length()
+    for (var i = 0; i < n; i++) {
+        var g = glyph(s.substring(i, i + 1))
+        var m = g.length() / 4
+        var ox = x + i * 6 * sz
+        for (var k = 0; k < m; k++) {
+            var x1 = digit(g, k * 4)
+            var y1 = digit(g, k * 4 + 1)
+            var x2 = digit(g, k * 4 + 2)
+            var y2 = digit(g, k * 4 + 3)
+            // inclinacao de 1/4 (italico)
+            c.moveTo(ox + x1 * sz + (6 - y1) * sz / 4, y + y1 * sz)
+            c.lineTo(ox + x2 * sz + (6 - y2) * sz / 4, y + y2 * sz)
+        }
+    }
+}
+
+text(Canvas c, String s, Int x, Int y, Int sz, Int lw, Color col) {
+    c.setStroke(col)
+    c.setLineWidth(lw)
+    c.beginPath()
+    textPath(c, s, x, y, sz)
+    c.stroke()
+}
+
+// texto centralizado com sombra e brilho neon opcional
+textC(Canvas c, String s, Int cx, Int y, Int sz, Int lw, Color col) {
+    text(c, s, cx - textW(s, sz) / 2, y, sz, lw, col)
+}
+
+textGlow(Canvas c, String s, Int cx, Int y, Int sz, Int lw, Color col, Color glow) {
+    var x = cx - textW(s, sz) / 2
+    alpha(c, 0.18)
+    text(c, s, x, y, sz, lw + 8, glow)
+    alpha(c, 0.35)
+    text(c, s, x, y, sz, lw + 4, glow)
+    alpha(c, 0.9)
+    text(c, s, x + 2, y + 3, sz, lw, Color(0, 0, 0))
+    alpha(c, 1.0)
+    text(c, s, x, y, sz, lw, col)
+}
+
+String two(Int v) {
+    if (v < 10) { return "0" + v }
+    return "" + v
+}

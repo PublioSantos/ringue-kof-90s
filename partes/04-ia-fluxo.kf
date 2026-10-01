@@ -1,0 +1,511 @@
+
+// ============================================================================
+//  IA (estilos + adaptacao) E FLUXO DA LUTA
+// ============================================================================
+
+// estilo: 0 boxeador, 1 tanque, 2 contra-golpe, 3 pressao
+Int aiAggr(Int k) {
+    if (k == 0) { return 42 }
+    if (k == 1) { return 30 }
+    if (k == 2) { return 26 }
+    return 66
+}
+
+Int aiDist(Int k) {
+    if (k == 0) { return 104 }
+    if (k == 1) { return 82 }
+    if (k == 2) { return 94 }
+    return 66
+}
+
+Int aiDef(Int k) {
+    if (k == 0) { return 52 }
+    if (k == 1) { return 34 }
+    if (k == 2) { return 70 }
+    return 30
+}
+
+Int aiSlip(Int k) {
+    if (k == 0) { return 45 }
+    if (k == 1) { return 8 }
+    if (k == 2) { return 72 }
+    return 15
+}
+
+String aiCombo(Game g, Int k, Bool oppGuard) {
+    var r = rnd(g.r, 5)
+    if (oppGuard && rnd(g.r, 100) < 60) {
+        if (r < 2) { return "5" }
+        if (r < 4) { return "53" }
+        return "153"
+    }
+    if (k == 0) {
+        if (r == 0) { return "1" }
+        if (r == 1) { return "11" }
+        if (r == 2) { return "12" }
+        if (r == 3) { return "112" }
+        return "1213"
+    }
+    if (k == 1) {
+        if (r < 2) { return "12" }
+        if (r == 2) { return "23" }
+        if (r == 3) { return "53" }
+        return "1"
+    }
+    if (k == 2) {
+        if (r < 2) { return "2" }
+        if (r == 2) { return "23" }
+        if (r == 3) { return "34" }
+        return "13"
+    }
+    if (r == 0) { return "53" }
+    if (r == 1) { return "535" }
+    if (r == 2) { return "343" }
+    if (r == 3) { return "1234" }
+    return "55"
+}
+
+Int reactFrames(Game g) {
+    if (g.diff == 1) { return 9 }
+    if (g.diff == 2) { return 5 }
+    return 3
+}
+
+think(Game g, Fighter p, Fighter o) {
+    var k = p.kind
+    var react = reactFrames(g)
+    // defesa reativa: le o preparo do golpe adversario
+    var reading = false
+    if (o.st == K.PUNCH && p.st == K.IDLE) {
+        if (o.stT == imin(react, startupOf(o) - 1)) { reading = true }
+    }
+    if (reading) {
+        var dist = dabs(o.x - p.x)
+        if (dist < toD(pReach(o.punch) + 24)) {
+            var tot = 1
+            for (var i = 1; i <= 5; i++) { tot = tot + p.seen[i] }
+            var adapt = p.seen[o.punch] * 100 / tot
+            var chance = aiDef(k) * (g.diff + 1) / 3 + adapt / 3
+            if (rnd(g.r, 100) < chance) {
+                if (rnd(g.r, 100) < aiSlip(k) && p.sta > 80) {
+                    p.qSlip = true
+                } else {
+                    p.aiGuard = 16 + stat(k, 4) * 3
+                }
+            }
+        }
+    }
+    if (p.aiGuard > 0) {
+        p.aiGuard = p.aiGuard - 1
+        p.inG = true
+    } else {
+        p.inG = false
+    }
+    // pune depois de uma esquiva perfeita
+    if (p.counterT > 0 && p.st == K.IDLE && p.qPunch == 0) {
+        if (rnd(g.r, 2) == 0) { p.qPunch = K.CROSS } else { p.qPunch = K.HOOK }
+        p.inMod = p.meter >= 100
+        p.aiGuard = 0
+    }
+    // executa o combo planejado
+    if (p.plan != "" && p.qPunch == 0 && p.aiGuard == 0) {
+        if (p.st == K.IDLE || (p.st == K.PUNCH && p.hitDone)) {
+            p.qPunch = digit(p.plan, p.planI)
+            p.planI = p.planI + 1
+            if (p.planI >= p.plan.length()) { p.plan = "" }
+        }
+    }
+    if (p.aiT > 0) {
+        p.aiT = p.aiT - 1
+        return
+    }
+    p.aiT = react + rnd(g.r, 6)
+    p.inL = false
+    p.inR = false
+    p.inU = false
+    p.inD = false
+    var dist = dabs(o.x - p.x)
+    var dz = o.z - p.z
+    var toward = 1
+    if (o.x < p.x) { toward = -1 }
+    // cansado ou machucado: recua e fecha a guarda
+    if (p.sta < 220 || (p.hp < 200 && rnd(g.r, 100) < 45)) {
+        if (toward > 0) { p.inL = true } else { p.inR = true }
+        if (rnd(g.r, 2) == 0) { p.inU = true } else { p.inD = true }
+        p.aiGuard = 24
+        return
+    }
+    // alinha a profundidade
+    if (dz > 6.0) { p.inD = true }
+    if (dz < -6.0) { p.inU = true }
+    // distancia ideal do estilo
+    var ideal = toD(aiDist(k))
+    if (dist > ideal + 14.0) {
+        if (toward > 0) { p.inR = true } else { p.inL = true }
+    } else if (dist < ideal - 18.0) {
+        if (toward > 0) { p.inL = true } else { p.inR = true }
+    }
+    // o boxeador circula
+    if (k == 0 && rnd(g.r, 100) < 25) {
+        if (rnd(g.r, 2) == 0) { p.inU = true } else { p.inD = true }
+    }
+    // ataca (so se o primeiro golpe do combo alcanca)
+    if (dabs(dz) <= 14.0 && p.plan == "" && p.st == K.IDLE) {
+        var aggr = aiAggr(k) * (2 + g.diff) / 4
+        if (o.st == K.HIT) { aggr = aggr + 30 }
+        if (o.sta < 300) { aggr = aggr + 15 }
+        if (k == 2 && o.st != K.PUNCH) { aggr = aggr - 8 }
+        if (rnd(g.r, 100) < aggr) {
+            var plan = aiCombo(g, k, o.inG)
+            var first = digit(plan, 0)
+            var reach = toD(pReach(first) + stat(k, 1) * 2) - 6.0
+            if (dist <= reach) {
+                p.plan = plan
+                p.planI = 0
+                p.inMod = p.meter >= 100 && (o.hp < 520 || rnd(g.r, 100) < 30)
+            } else if (dist <= toD(pReach(K.JAB)) && rnd(g.r, 100) < 50) {
+                p.plan = "1"
+                p.planI = 0
+            }
+        }
+    }
+    // reaproxima rapido se o adversario foi empurrado para longe do alcance
+    if (dist > ideal + 30.0 && g.diff >= 2) { p.aiT = imin(p.aiT, 3) }
+}
+
+// ---------------------------------------------------------------- levantar
+Double riseMarker(Game g, Fighter p) {
+    return sn(toD(g.t) * 0.075 * (1.0 + toD(p.kdTotal) * 0.3))
+}
+
+Double riseZone(Fighter p) {
+    return clampd(0.42 - toD(p.kdTotal) * 0.09, 0.14, 0.42)
+}
+
+riseTry(Game g, Fighter p) {
+    if (p.riseCool > 0 || p.st != K.FALL || p.stT < 45) { return }
+    if (dabs(riseMarker(g, p)) < riseZone(p)) {
+        p.riseOk = p.riseOk + 1
+        p.riseCool = 12
+        sfx(g, K.S_PING)
+    } else {
+        p.riseCool = 30
+        sfx(g, K.S_BUZZ)
+    }
+}
+
+rise(Game g, Fighter p) {
+    var o = other(g, p)
+    p.st = K.RISE
+    p.stT = 0
+    p.hp = imax(160, 520 - p.kdTotal * 110)
+    p.lag = p.hp
+    p.sta = imax(p.sta, 450)
+    g.state = K.FIGHT
+    g.t = 0
+    sfx(g, K.S_OK)
+    pop(g, "LEVANTOU", p.x, headY(p) - 30.0, 5, Color(120, 255, 160))
+    if (o.x < p.x) {
+        o.x = clampd(p.x - 170.0, toD(K.XMIN), toD(K.XMAX))
+    } else {
+        o.x = clampd(p.x + 170.0, toD(K.XMIN), toD(K.XMAX))
+    }
+}
+
+stepDown(Game g) {
+    var p = g.a
+    if (g.downWho == 2) { p = g.b }
+    var o = other(g, p)
+    p.stT = p.stT + 1
+    // quem derrubou vai para o corner neutro
+    o.inL = false
+    o.inR = false
+    o.inU = false
+    o.inD = false
+    o.inG = false
+    o.qPunch = 0
+    o.plan = ""
+    if (dabs(o.x - p.x) < 190.0) {
+        if (o.x < p.x) { o.inL = true } else { o.inR = true }
+    }
+    stepFighter(g, o, p)
+    if (p.stT < 45) { return }
+    if (p.kd >= 3) {
+        if (p.stT >= 80) {
+            var w = 2
+            if (g.downWho == 2) { w = 1 }
+            endFight(g, w, "NOCAUTE TECNICO", "3 QUEDAS NO ROUND")
+        }
+        return
+    }
+    g.countT = g.countT + 1
+    if (g.countT >= 54) {
+        g.countT = 0
+        g.count = g.count + 1
+        sfx(g, K.S_TICK)
+        if (g.count >= 10) {
+            var w = 2
+            if (g.downWho == 2) { w = 1 }
+            endFight(g, w, "NOCAUTE", "CONTAGEM ATE 10")
+            return
+        }
+    }
+    if (!p.human) {
+        if (g.count >= p.riseAt) { rise(g, p) }
+    } else if (p.riseOk >= 3) {
+        rise(g, p)
+    }
+}
+
+// ---------------------------------------------------------------- loop principal
+updateFx(Game g) {
+    var keep = listOf<Part>()
+    for (var p in g.parts) {
+        p.t = p.t + 1
+        p.x = p.x + p.vx
+        p.y = p.y + p.vy
+        p.vy = p.vy + 0.22
+        p.vx = p.vx * 0.97
+        if (p.t < p.life) { keep.add(p) }
+    }
+    g.parts = keep
+    var keep2 = listOf<Pop>()
+    for (var q in g.pops) {
+        q.t = q.t + 1
+        q.y = q.y - 0.6
+        if (q.t < q.life) { keep2.add(q) }
+    }
+    g.pops = keep2
+    if (g.flashScr > 0) { g.flashScr = g.flashScr - 1 }
+    g.shake = g.shake * 0.85
+}
+
+updateCamera(Game g) {
+    var a = g.a
+    var b = g.b
+    var cx = (a.x + b.x) / 2.0
+    var dist = dabs(a.x - b.x)
+    var zt = clampd(1.32 - dist / 950.0, 1.0, 1.3)
+    var cy = (floorY(a.z) + floorY(b.z)) / 2.0 - 110.0
+    if (g.state == K.DOWN) {
+        var p = a
+        if (g.downWho == 2) { p = b }
+        cx = p.x
+        cy = floorY(p.z) - 70.0
+        zt = 1.45
+    }
+    if (g.state == K.INTRO) {
+        zt = 1.35 - toD(imin(g.t, 120)) / 120.0 * 0.25
+    }
+    if (g.state == K.OVER) {
+        var w = a
+        if (g.winner == 2) { w = b }
+        if (g.winner != 0) {
+            cx = w.x
+            cy = floorY(w.z) - 120.0
+            zt = 1.35
+        }
+    }
+    if (g.state == K.TITLE || g.state == K.SELECT) {
+        cx = 480.0
+        cy = 330.0
+        zt = 1.0
+    }
+    g.camX = g.camX + (cx - g.camX) * 0.08
+    g.camY = g.camY + (cy - g.camY) * 0.08
+    g.zoom = g.zoom + (zt - g.zoom) * 0.06
+}
+
+tick(Game g) {
+    g.frame = g.frame + 1
+    updateFx(g)
+    updateCamera(g)
+    if (!g.loaded) { g.loaded = loadStep(g.mix) }
+    if (g.state == K.TITLE || g.state == K.SELECT || g.state == K.PAUSE) {
+        g.t = g.t + 1
+        return
+    }
+    if (g.hitstop > 0) {
+        g.hitstop = g.hitstop - 1
+        return
+    }
+    if (g.slow > 0) {
+        g.slow = g.slow - 1
+        if (g.frame % 3 != 0) { return }
+    }
+    g.t = g.t + 1
+    g.hype = clampd(g.hype - 0.0015, 0.15, 1.0)
+    if (g.state == K.INTRO) {
+        if (g.t == 100) { sfx(g, K.S_BELL) }
+        if (g.t >= 130) {
+            g.state = K.FIGHT
+            g.t = 0
+        }
+    } else if (g.state == K.FIGHT) {
+        if (!g.a.human) { think(g, g.a, g.b) }
+        if (!g.b.human) { think(g, g.b, g.a) }
+        stepFighter(g, g.a, g.b)
+        if (g.state == K.FIGHT) { stepFighter(g, g.b, g.a) }
+        if (g.state == K.FIGHT) {
+            g.clock = g.clock - 1
+            if (g.clock <= 0) {
+                g.clock = 0
+                endRound(g)
+            }
+            // batimento cardiaco quando o jogador esta grogue
+            var h = g.a
+            if (!h.human) { h = g.b }
+            if (h.human && h.hp < 230) {
+                g.heartT = g.heartT - 1
+                if (g.heartT <= 0) {
+                    sfx(g, K.S_HEART)
+                    g.heartT = 55
+                }
+            }
+        }
+    } else if (g.state == K.DOWN) {
+        stepDown(g)
+    } else if (g.state == K.REND) {
+        if (g.t >= 420) { nextRound(g) }
+    } else if (g.state == K.OVER) {
+        var w = g.a
+        if (g.winner == 2) { w = g.b }
+        if (g.winner != 0) { w.stT = w.stT + 1 }
+        var l = other(g, w)
+        if (l.st == K.FALL) { l.stT = l.stT + 1 }
+    }
+}
+
+// ---------------------------------------------------------------- entrada
+confirm(Game g) {
+    if (g.state == K.TITLE) {
+        g.state = K.SELECT
+        g.t = 0
+        sfx(g, K.S_OK)
+        g.mix.playMusic = true
+    } else if (g.state == K.SELECT) {
+        sfx(g, K.S_OK)
+        startFight(g)
+    } else if (g.state == K.REND) {
+        nextRound(g)
+    } else if (g.state == K.OVER && g.t > 60) {
+        g.state = K.SELECT
+        g.t = 0
+        g.mix.playMusic = true
+        g.mix.playCrowd = false
+    }
+}
+
+togglePause(Game g) {
+    if (g.state == K.FIGHT || g.state == K.DOWN || g.state == K.INTRO) {
+        g.prevState = g.state
+        g.state = K.PAUSE
+        sfx(g, K.S_UI)
+    } else if (g.state == K.PAUSE) {
+        g.state = g.prevState
+        sfx(g, K.S_UI)
+    }
+}
+
+cycleSel(Game g, Int side, Int d) {
+    if (g.state != K.SELECT) { return }
+    if (side == 1) { g.sel1 = (g.sel1 + d + 4) % 4 } else { g.sel2 = (g.sel2 + d + 4) % 4 }
+    sfx(g, K.S_UI)
+}
+
+press(Game g, Fighter p, Int type, Bool down) {
+    if (!down) { return }
+    if (g.state == K.DOWN) {
+        var dn = g.a
+        if (g.downWho == 2) { dn = g.b }
+        if (dn == p && p.human) { riseTry(g, p) }
+        return
+    }
+    if (g.state == K.FIGHT) { p.qPunch = type }
+}
+
+class Held {
+    static String keys = ""
+}
+
+// repeticao do teclado nao dispara golpes em rajada
+Bool edge(String k, Bool down) {
+    var tagk = "[" + k + "]"
+    var was = Held.keys.indexOf(tagk) >= 0
+    if (down && !was) {
+        Held.keys = Held.keys + tagk
+        return true
+    }
+    if (!down && was) {
+        var i = Held.keys.indexOf(tagk)
+        Held.keys = Held.keys.substring(0, i) + Held.keys.substring(i + tagk.length(), Held.keys.length())
+    }
+    return false
+}
+
+onKey(Game g, String raw, Bool down) {
+    var k = raw.toLowerCase()
+    var fresh = edge(k, down)
+    if (fresh && k == "enter") {
+        confirm(g)
+        return
+    }
+    if (fresh && (k == "p" || k == "escape")) {
+        togglePause(g)
+        return
+    }
+    if (fresh && k == "n") {
+        g.mix.on = !g.mix.on
+        return
+    }
+    if (fresh && k == "m") {
+        g.mix.music = !g.mix.music
+        return
+    }
+    if (g.state == K.SELECT && fresh) {
+        if (k == "a") { cycleSel(g, 1, -1) }
+        if (k == "d") { cycleSel(g, 1, 1) }
+        if (k == "arrowleft") { cycleSel(g, 2, -1) }
+        if (k == "arrowright") { cycleSel(g, 2, 1) }
+        return
+    }
+    var a = g.a
+    var b = g.b
+    var solo = g.mode == 1
+    // P1: WASD, J K L I U, espaco guarda, Q esquiva, R especial (1P: setas tambem andam)
+    if (k == "a" || (solo && k == "arrowleft")) { a.inL = down }
+    if (k == "d" || (solo && k == "arrowright")) { a.inR = down }
+    if (k == "w" || (solo && k == "arrowup")) { a.inU = down }
+    if (k == "s" || (solo && k == "arrowdown")) { a.inD = down }
+    if (k == " " || k == "spacebar") { a.inG = down }
+    if (k == "r") { a.inMod = down }
+    if (fresh && k == "q") { a.qSlip = true }
+    if (fresh && k == "j") { press(g, a, K.JAB, true) }
+    if (fresh && k == "k") { press(g, a, K.CROSS, true) }
+    if (fresh && k == "l") { press(g, a, K.HOOK, true) }
+    if (fresh && k == "i") { press(g, a, K.UPPER, true) }
+    if (fresh && k == "u") { press(g, a, K.BODY, true) }
+    if (solo) { return }
+    // P2: setas, 1 2 3 4 5, 0 guarda, . esquiva, 6 especial
+    if (k == "arrowleft") { b.inL = down }
+    if (k == "arrowright") { b.inR = down }
+    if (k == "arrowup") { b.inU = down }
+    if (k == "arrowdown") { b.inD = down }
+    if (k == "0") { b.inG = down }
+    if (k == "6") { b.inMod = down }
+    if (fresh && (k == "." || k == ",")) { b.qSlip = true }
+    if (fresh && k == "1") { press(g, b, K.JAB, true) }
+    if (fresh && k == "2") { press(g, b, K.CROSS, true) }
+    if (fresh && k == "3") { press(g, b, K.HOOK, true) }
+    if (fresh && k == "4") { press(g, b, K.UPPER, true) }
+    if (fresh && k == "5") { press(g, b, K.BODY, true) }
+}
+
+releaseAll(Fighter p) {
+    p.inL = false
+    p.inR = false
+    p.inU = false
+    p.inD = false
+    p.inG = false
+    p.inMod = false
+}

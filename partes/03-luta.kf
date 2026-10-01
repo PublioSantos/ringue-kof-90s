@@ -1,0 +1,795 @@
+
+// ============================================================================
+//  LUTADORES, REGRAS E JUIZES
+// ============================================================================
+
+// ---------------------------------------------------------------- fichas
+String fName(Int k) {
+    if (k == 0) { return "RAFA RAIO" }
+    if (k == 1) { return "BRUNO MURALHA" }
+    if (k == 2) { return "KENJI CONTRA" }
+    return "DANTE TRATOR"
+}
+
+String fStyle(Int k) {
+    if (k == 0) { return "BOXEADOR - RAPIDO E TECNICO" }
+    if (k == 1) { return "TANQUE - AGUENTA TUDO" }
+    if (k == 2) { return "CONTRA-GOLPE - DEFESA" }
+    return "PRESSAO - PANCADA PESADA"
+}
+
+// atributos 1..5: 0 forca, 1 velocidade, 2 queixo, 3 folego, 4 defesa
+Int stat(Int k, Int a) {
+    var t = "25244" + "31552" + "33335" + "53322"
+    return digit(t, k * 5 + a)
+}
+
+Color skinC(Int k) {
+    if (k == 0) { return Color(198, 140, 98) }
+    if (k == 1) { return Color(236, 196, 160) }
+    if (k == 2) { return Color(222, 178, 132) }
+    return Color(112, 72, 46)
+}
+
+Color hairC(Int k) {
+    if (k == 0) { return Color(28, 22, 18) }
+    if (k == 1) { return Color(150, 72, 34) }
+    if (k == 2) { return Color(18, 18, 24) }
+    return Color(20, 14, 10)
+}
+
+Color trunkC(Int k) {
+    if (k == 0) { return Color(245, 190, 40) }
+    if (k == 1) { return Color(40, 170, 90) }
+    if (k == 2) { return Color(235, 235, 240) }
+    return Color(130, 60, 200)
+}
+
+Color trimC(Int k) {
+    if (k == 0) { return Color(20, 20, 24) }
+    if (k == 1) { return Color(240, 240, 240) }
+    if (k == 2) { return Color(210, 30, 40) }
+    return Color(250, 210, 60)
+}
+
+Color gloveC(Int k) {
+    if (k == 0) { return Color(220, 30, 40) }
+    if (k == 1) { return Color(30, 90, 210) }
+    if (k == 2) { return Color(25, 25, 28) }
+    return Color(240, 175, 20)
+}
+
+// ---------------------------------------------------------------- golpes
+// tabela por golpe 1..5: preparo, ativo, recuperacao, dano, custo, alcance, atordoa, empurra
+class PT {
+    static List<Int> D = listOf<Int>()
+}
+
+buildPunchTable() {
+    var t = listOf(5, 3, 9, 34, 22, 100, 12, 4,
+        8, 3, 14, 62, 42, 112, 16, 7,
+        10, 4, 17, 78, 55, 86, 20, 9,
+        12, 4, 21, 92, 68, 74, 24, 10,
+        9, 3, 16, 56, 46, 92, 18, 6)
+    for (var v in t) { PT.D.add(v) }
+}
+
+Int pData(Int p, Int col) {
+    if (p < 1 || p > 5) { return 0 }
+    return PT.D.get((p - 1) * 8 + col)
+}
+
+Int pStart(Int p) { return pData(p, 0) }
+Int pAct(Int p) { return pData(p, 1) }
+Int pRec(Int p) { return pData(p, 2) }
+Int pDmg(Int p) { return pData(p, 3) }
+Int pCost(Int p) { return pData(p, 4) }
+Int pReach(Int p) { return pData(p, 5) }
+Int pStun(Int p) { return pData(p, 6) }
+Int pPush(Int p) { return pData(p, 7) }
+
+String pName(Int p) {
+    if (p == K.JAB) { return "JAB" }
+    if (p == K.CROSS) { return "DIRETO" }
+    if (p == K.HOOK) { return "GANCHO" }
+    if (p == K.UPPER) { return "UPPERCUT" }
+    return "CORPO"
+}
+
+// ---------------------------------------------------------------- objetos
+class Fighter {
+    Int kind = 0
+    Bool human = true
+    Int side = 1
+    Double x = 300.0
+    Double z = 50.0
+    Double vx = 0.0
+    Double vz = 0.0
+    Int face = 1
+    Int st = 0
+    Int stT = 0
+    Int stLen = 0
+    Int punch = 0
+    Bool star = false
+    Bool hitDone = false
+    Int hp = 1000
+    Int rec = 0
+    Int lag = 1000
+    Int lagT = 0
+    Int sta = 1000
+    Int bodyDmg = 0
+    Int meter = 0
+    Int hitCool = 0
+    Int kd = 0
+    Int kdTotal = 0
+    Int combo = 0
+    Int comboT = 0
+    Int counterT = 0
+    Int flash = 0
+    Double walk = 0.0
+    Double snap = 0.0
+    Double lean = 0.0
+    Int blinkT = 0
+    // entrada
+    Bool inL = false
+    Bool inR = false
+    Bool inU = false
+    Bool inD = false
+    Bool inG = false
+    Bool inMod = false
+    Int qPunch = 0
+    Bool qSlip = false
+    // estatisticas (luta e round)
+    Int thrown = 0
+    Int landed = 0
+    Int power = 0
+    Int thrownR = 0
+    Int landedR = 0
+    Int powerR = 0
+    Int dmgR = 0
+    Int kdR = 0
+    // IA
+    Int aiT = 0
+    Int aiGuard = 0
+    String plan = ""
+    Int planI = 0
+    Int[] seen = new Int[6]
+    Int riseAt = 0
+    // minijogo de levantar
+    Int riseOk = 0
+    Int riseCool = 0
+    Int tiredT = -999
+}
+
+class Part {
+    Double x = 0.0
+    Double y = 0.0
+    Double vx = 0.0
+    Double vy = 0.0
+    Int t = 0
+    Int life = 30
+    Int kind = 0
+    Double r = 3.0
+    Color col = Color(255, 255, 255)
+}
+
+class Pop {
+    String s = ""
+    Double x = 0.0
+    Double y = 0.0
+    Int t = 0
+    Int life = 70
+    Int sz = 5
+    Color col = Color(255, 255, 255)
+}
+
+class Card {
+    Int[] a = new Int[13]
+    Int[] b = new Int[13]
+    Int bias = 0
+}
+
+class Game {
+    Int state = 0
+    Int t = 0
+    Int frame = 0
+    Int round = 1
+    Int rounds = 3
+    Int roundLen = 3600
+    Int clock = 3600
+    Int mode = 1
+    Int diff = 2
+    Int sel1 = 0
+    Int sel2 = 3
+    Int cursor = 0
+    Fighter a = Fighter()
+    Fighter b = Fighter()
+    Rng r = Rng()
+    Mixer mix = Mixer()
+    // camera e efeitos
+    Double camX = 480.0
+    Double camY = 330.0
+    Double zoom = 1.0
+    Double shake = 0.0
+    Int hitstop = 0
+    Int slow = 0
+    Int flashScr = 0
+    Double hype = 0.2
+    List<Part> parts = listOf<Part>()
+    List<Pop> pops = listOf<Pop>()
+    // queda
+    Int downWho = 0
+    Int count = 0
+    Int countT = 0
+    Int riseT = 0
+    // fim
+    Int winner = 0
+    String how = ""
+    String sub = ""
+    Card c1 = Card()
+    Card c2 = Card()
+    Card c3 = Card()
+    Int prevState = 0
+    Int heartT = 0
+    Bool loaded = false
+}
+
+Fighter other(Game g, Fighter p) {
+    if (p == g.a) { return g.b }
+    return g.a
+}
+
+// ---------------------------------------------------------------- efeitos
+pop(Game g, String s, Double x, Double y, Int sz, Color col) {
+    // sem repeticao do mesmo texto e empilha os que aparecem juntos
+    var yy = y
+    for (var q in g.pops) {
+        if (q.s == s && q.t < 50) { return }
+        if (dabs(q.x - x) < 160.0 && dabs(q.y - yy) < toD(q.sz * 8)) { yy = q.y - toD(q.sz * 9) }
+    }
+    var p = Pop()
+    p.s = s
+    p.x = x
+    p.y = yy
+    p.sz = sz
+    p.col = col
+    g.pops.add(p)
+}
+
+burst(Game g, Double x, Double y, Int n, Int kind, Color col, Double spd) {
+    for (var i = 0; i < n; i++) {
+        var p = Part()
+        var ang = rndd(g.r) * K.TAU
+        var v = spd * (0.4 + rndd(g.r))
+        p.x = x
+        p.y = y
+        p.vx = cs(ang) * v
+        p.vy = sn(ang) * v - spd * 0.4
+        p.kind = kind
+        p.col = col
+        p.life = 22 + rnd(g.r, 22)
+        p.r = 1.5 + rndd(g.r) * 3.0
+        g.parts.add(p)
+    }
+}
+
+Double floorY(Double z) {
+    return 330.0 + z * 1.35
+}
+
+Double scaleZ(Double z) {
+    return 0.82 + z * 0.0026
+}
+
+Double headY(Fighter p) {
+    return floorY(p.z) - 182.0 * scaleZ(p.z)
+}
+
+// ---------------------------------------------------------------- regras
+resetFighter(Fighter p, Int kind, Bool human, Int side) {
+    p.kind = kind
+    p.human = human
+    p.side = side
+    p.hp = 1000
+    p.rec = 0
+    p.lag = 1000
+    p.sta = 1000
+    p.bodyDmg = 0
+    p.meter = 0
+    p.kd = 0
+    p.kdTotal = 0
+    p.thrown = 0
+    p.landed = 0
+    p.power = 0
+    for (var i = 0; i < 6; i++) { p.seen[i] = 0 }
+    toCorner(p)
+}
+
+toCorner(Fighter p) {
+    p.st = K.IDLE
+    p.stT = 0
+    p.punch = 0
+    p.vx = 0.0
+    p.vz = 0.0
+    p.z = 50.0
+    p.combo = 0
+    p.comboT = 0
+    p.counterT = 0
+    p.qPunch = 0
+    p.qSlip = false
+    p.plan = ""
+    p.aiGuard = 0
+    p.inG = false
+    p.thrownR = 0
+    p.landedR = 0
+    p.powerR = 0
+    p.dmgR = 0
+    p.kdR = 0
+    p.kd = 0
+    if (p.side == 1) {
+        p.x = 330.0
+        p.face = 1
+    } else {
+        p.x = 630.0
+        p.face = -1
+    }
+}
+
+Int staMax(Fighter p) {
+    return 1000 - p.bodyDmg / 2
+}
+
+startFight(Game g) {
+    resetFighter(g.a, g.sel1, true, 1)
+    resetFighter(g.b, g.sel2, g.mode == 2, 2)
+    g.round = 1
+    g.winner = 0
+    g.how = ""
+    g.sub = ""
+    g.c1 = Card()
+    g.c2 = Card()
+    g.c3 = Card()
+    g.c1.bias = rnd(g.r, 3) - 1
+    g.c2.bias = rnd(g.r, 3) - 1
+    g.c3.bias = rnd(g.r, 3) - 1
+    g.mix.playCrowd = true
+    g.mix.playMusic = false
+    startRound(g)
+}
+
+startRound(Game g) {
+    toCorner(g.a)
+    toCorner(g.b)
+    g.clock = g.roundLen
+    g.state = K.INTRO
+    g.t = 0
+    g.parts = listOf<Part>()
+    g.pops = listOf<Pop>()
+    g.zoom = 1.25
+}
+
+startPunch(Game g, Fighter p, Int type) {
+    var cost = pCost(type)
+    if (p.sta < cost / 2) {
+        if (p.human && g.frame - p.tiredT > 150) {
+            p.tiredT = g.frame
+            pop(g, "SEM FOLEGO", p.x, headY(p) - 30.0, 3, Color(150, 200, 255))
+        }
+        p.qPunch = 0
+        return
+    }
+    p.star = false
+    if (p.inMod && p.meter >= 100 && type != K.JAB) {
+        p.star = true
+        p.meter = 0
+        sfx(g, K.S_STAR)
+        pop(g, "SUPER GOLPE", p.x, headY(p) - 40.0, 4, Color(255, 220, 60))
+    }
+    p.st = K.PUNCH
+    p.stT = 0
+    p.punch = type
+    p.hitDone = false
+    p.stLen = pStart(type) + pAct(type) + pRec(type)
+    if (p.star) { p.stLen = p.stLen + 6 }
+    p.sta = imax(0, p.sta - cost)
+    p.thrown = p.thrown + 1
+    p.thrownR = p.thrownR + 1
+    p.qPunch = 0
+    var o = other(g, p)
+    o.seen[type] = o.seen[type] + 1
+}
+
+Int startupOf(Fighter p) {
+    if (p.star) { return pStart(p.punch) + 6 }
+    return pStart(p.punch)
+}
+
+resolve(Game g, Fighter at, Fighter df) {
+    var type = at.punch
+    var dx = (df.x - at.x) * toD(at.face)
+    var dz = dabs(df.z - at.z)
+    var reach = toD(pReach(type)) + toD(stat(at.kind, 1)) * 2.0
+    if (dx < 22.0 || dx > reach || dz > 18.0 || df.st == K.FALL || df.st == K.RISE) {
+        sfx(g, K.S_WHOOSH)
+        at.sta = imax(0, at.sta - 12)
+        at.combo = 0
+        return
+    }
+    var hx = df.x - toD(at.face) * 14.0
+    var hy = headY(df) + 10.0
+    if (type == K.BODY) { hy = floorY(df.z) - 120.0 * scaleZ(df.z) }
+    // esquiva perfeita
+    if (df.st == K.SLIP && df.stT >= 3 && df.stT <= 16) {
+        sfx(g, K.S_SLIP)
+        pop(g, "ESQUIVA PERFEITA", df.x, headY(df) - 34.0, 4, Color(110, 230, 255))
+        g.slow = 42
+        df.counterT = 55
+        df.meter = imin(100, df.meter + 18)
+        at.sta = imax(0, at.sta - 30)
+        at.combo = 0
+        return
+    }
+    var isBody = type == K.BODY
+    var dmg = pDmg(type)
+    dmg = dmg * (80 + stat(at.kind, 0) * 10) / 100
+    dmg = dmg * (60 + at.sta * 40 / 1000) / 100
+    dmg = dmg * (118 - stat(df.kind, 2) * 6) / 100
+    // combo
+    if (at.comboT > 0) { at.combo = at.combo + 1 } else { at.combo = 1 }
+    at.comboT = 50
+    var scale = 100
+    if (at.combo == 3) { scale = 90 }
+    if (at.combo == 4) { scale = 80 }
+    if (at.combo >= 5) { scale = 70 }
+    dmg = dmg * scale / 100
+    // contra-ataque
+    var counter = false
+    if (df.st == K.PUNCH) {
+        if (df.stT < startupOf(df)) { counter = true }
+    }
+    if (at.counterT > 0) {
+        counter = true
+        at.counterT = 0
+    }
+    if (counter) { dmg = dmg * 3 / 2 }
+    if (at.star) { dmg = dmg * 22 / 10 }
+    // guarda
+    var guarding = df.inG && (df.st == K.IDLE || df.st == K.BLOCKED)
+    if (guarding && !isBody && !at.star) {
+        if (df.sta < 110) {
+            pop(g, "GUARDA QUEBRADA", df.x, headY(df) - 34.0, 4, Color(255, 120, 60))
+        } else {
+            df.sta = imax(0, df.sta - pDmg(type) / 2)
+            df.st = K.BLOCKED
+            df.stT = 0
+            df.stLen = 8 + type
+            df.vx = df.vx + toD(at.face) * toD(pPush(type)) * 0.25
+            df.hp = imax(1, df.hp - dmg * 12 / 100)
+            at.meter = imin(100, at.meter + 2)
+            at.combo = 0
+            sfx(g, K.S_BLOCK)
+            burst(g, hx, hy, 5, 1, Color(255, 255, 255), 2.5)
+            g.hitstop = 3
+            return
+        }
+    }
+    if (guarding && isBody) { dmg = dmg * 75 / 100 }
+    // aplica o dano
+    df.hp = df.hp - dmg
+    df.rec = imin(df.rec + dmg * 35 / 100, 1000 - imax(0, df.hp))
+    df.hitCool = 100
+    df.lagT = 30
+    if (isBody) {
+        df.bodyDmg = imin(800, df.bodyDmg + dmg / 2)
+        df.sta = imax(0, df.sta - dmg / 2)
+    }
+    df.st = K.HIT
+    df.stT = 0
+    // decaimento: cada golpe seguido atordoa menos e empurra mais (sem combo infinito)
+    var decay = imax(25, 100 - (at.combo - 1) * 20)
+    df.stLen = imax(4, pStun(type) * decay / 100)
+    if (at.star) { df.stLen = pStun(type) * 16 / 10 }
+    df.vx = df.vx + toD(at.face) * toD(pPush(type)) * (0.4 + toD(imin(at.combo, 6)) * 0.12)
+    df.snap = 1.0
+    df.flash = 6
+    df.qPunch = 0
+    df.plan = ""
+    df.combo = 0
+    at.landed = at.landed + 1
+    at.landedR = at.landedR + 1
+    at.dmgR = at.dmgR + dmg
+    if (type != K.JAB) {
+        at.power = at.power + 1
+        at.powerR = at.powerR + 1
+    }
+    at.meter = imin(100, at.meter + dmg / 6 + 1)
+    if (at.meter >= 100 && at.human) { pop(g, "ESPECIAL PRONTO (R)", at.x, headY(at) - 50.0, 3, Color(255, 220, 60)) }
+    // sons e efeitos
+    if (type == K.JAB) { sfx(g, K.S_JAB) }
+    if (type == K.CROSS) { sfx(g, K.S_CROSS) }
+    if (type == K.HOOK) { sfx(g, K.S_HOOK) }
+    if (type == K.UPPER) { sfx(g, K.S_UPPER) }
+    if (type == K.BODY) { sfx(g, K.S_BODY) }
+    var power = toD(dmg) / 60.0
+    g.hitstop = imin(14, 3 + dmg / 18)
+    g.shake = clampd(power * 5.0, 1.0, 14.0)
+    g.hype = clampd(g.hype + power * 0.08, 0.0, 1.0)
+    burst(g, hx, hy, 6 + dmg / 10, 0, Color(190, 230, 255), 3.5 + power * 2.0)
+    burst(g, hx, hy, 3 + dmg / 25, 1, Color(255, 240, 160), 4.0 + power * 2.0)
+    if (counter) { pop(g, "CONTRA-ATAQUE", df.x, headY(df) - 40.0, 4, Color(255, 90, 80)) }
+    if (at.combo >= 3) { pop(g, at.combo + " GOLPES", at.x, headY(at) - 60.0, 4, Color(255, 200, 70)) }
+    if (at.star) {
+        g.flashScr = 8
+        g.slow = 30
+        g.hitstop = 16
+    }
+    if (df.hp <= 0) { knockdown(g, at, df) }
+}
+
+knockdown(Game g, Fighter at, Fighter df) {
+    df.hp = 0
+    df.rec = 0
+    df.st = K.FALL
+    df.stT = 0
+    df.kd = df.kd + 1
+    df.kdR = df.kdR + 1
+    df.kdTotal = df.kdTotal + 1
+    df.riseOk = 0
+    df.riseCool = 0
+    df.inG = false
+    at.st = K.IDLE
+    at.stT = 0
+    at.plan = ""
+    g.state = K.DOWN
+    g.t = 0
+    g.count = 0
+    g.countT = 0
+    g.slow = 70
+    g.hitstop = 10
+    g.shake = 16.0
+    g.hype = 1.0
+    if (df == g.a) { g.downWho = 1 } else { g.downWho = 2 }
+    sfx(g, K.S_KD)
+    pop(g, "KNOCKDOWN", df.x, headY(df) - 30.0, 6, Color(255, 70, 60))
+    burst(g, df.x, floorY(df.z) - 10.0, 14, 2, Color(220, 220, 230), 3.0)
+    // CPU decide em que contagem levanta
+    var r = 3 + df.kdTotal * 2 + rnd(g.r, 4) - stat(df.kind, 2)
+    if (df.kd >= 3) { r = 99 }
+    df.riseAt = clampi(r, 2, 99)
+}
+
+endFight(Game g, Int winner, String how, String sub) {
+    g.winner = winner
+    g.how = how
+    g.sub = sub
+    g.state = K.OVER
+    g.t = 0
+    var w = g.a
+    if (winner == 2) { w = g.b }
+    if (winner != 0) {
+        w.st = K.WIN
+        w.stT = 0
+    }
+    sfx(g, K.S_CHEER)
+    g.mix.playMusic = true
+}
+
+// ---------------------------------------------------------------- juizes (10-9)
+scoreJudge(Game g, Card c) {
+    var a = g.a
+    var b = g.b
+    // atividade: golpes conectados, golpes de poder e dano (com o olhar de cada juiz)
+    var sa = a.landedR * 10 + a.powerR * 12 + a.dmgR / 6 + rnd(g.r, 18) + c.bias * 4
+    var sb = b.landedR * 10 + b.powerR * 12 + b.dmgR / 6 + rnd(g.r, 18) - c.bias * 4
+    var act = 0
+    if (sa > sb) { act = 1 }
+    if (sb > sa) { act = 2 }
+    var ra = 10
+    var rb = 10
+    var kdDiff = a.kdR - b.kdR
+    if (kdDiff > 0) {
+        ra = 9 - kdDiff
+        if (act == 1) { ra = ra + 1 }
+        if (ra >= 10) { ra = 9 }
+    } else if (kdDiff < 0) {
+        rb = 9 + kdDiff
+        if (act == 2) { rb = rb + 1 }
+        if (rb >= 10) { rb = 9 }
+    } else if (act == 1) {
+        rb = 9
+    } else if (act == 2) {
+        ra = 9
+    }
+    c.a[g.round] = clampi(ra, 6, 10)
+    c.b[g.round] = clampi(rb, 6, 10)
+}
+
+Int cardTotal(Card c, Int side, Int upto) {
+    var s = 0
+    for (var i = 1; i <= upto; i++) {
+        if (side == 1) { s = s + c.a[i] } else { s = s + c.b[i] }
+    }
+    return s
+}
+
+Int judgeWinner(Card c, Int rounds) {
+    var ta = cardTotal(c, 1, rounds)
+    var tb = cardTotal(c, 2, rounds)
+    if (ta > tb) { return 1 }
+    if (tb > ta) { return 2 }
+    return 0
+}
+
+decision(Game g) {
+    var w1 = judgeWinner(g.c1, g.rounds)
+    var w2 = judgeWinner(g.c2, g.rounds)
+    var w3 = judgeWinner(g.c3, g.rounds)
+    var na = 0
+    var nb = 0
+    if (w1 == 1) { na = na + 1 }
+    if (w2 == 1) { na = na + 1 }
+    if (w3 == 1) { na = na + 1 }
+    if (w1 == 2) { nb = nb + 1 }
+    if (w2 == 2) { nb = nb + 1 }
+    if (w3 == 2) { nb = nb + 1 }
+    if (na == 3) {
+        endFight(g, 1, "DECISAO UNANIME", "")
+    } else if (nb == 3) {
+        endFight(g, 2, "DECISAO UNANIME", "")
+    } else if (na == 2 && nb == 1) {
+        endFight(g, 1, "DECISAO DIVIDIDA", "")
+    } else if (nb == 2 && na == 1) {
+        endFight(g, 2, "DECISAO DIVIDIDA", "")
+    } else if (na == 2) {
+        endFight(g, 1, "DECISAO MAJORITARIA", "")
+    } else if (nb == 2) {
+        endFight(g, 2, "DECISAO MAJORITARIA", "")
+    } else {
+        endFight(g, 0, "EMPATE", "")
+    }
+}
+
+endRound(Game g) {
+    scoreJudge(g, g.c1)
+    scoreJudge(g, g.c2)
+    scoreJudge(g, g.c3)
+    g.state = K.REND
+    g.t = 0
+    sfx(g, K.S_BELL)
+    g.a.inG = false
+    g.b.inG = false
+}
+
+nextRound(Game g) {
+    if (g.round >= g.rounds) {
+        decision(g)
+        return
+    }
+    // intervalo no corner: recupera parte da energia
+    var fs = listOf(g.a, g.b)
+    for (var p in fs) {
+        p.hp = imin(1000, p.hp + p.rec + 220)
+        p.rec = 0
+        p.lag = p.hp
+        p.bodyDmg = imax(0, p.bodyDmg - 120)
+        p.sta = staMax(p)
+    }
+    g.round = g.round + 1
+    startRound(g)
+}
+
+// ---------------------------------------------------------------- simulacao do lutador
+stepFighter(Game g, Fighter p, Fighter o) {
+    if (p.flash > 0) { p.flash = p.flash - 1 }
+    if (p.comboT > 0) { p.comboT = p.comboT - 1 }
+    if (p.counterT > 0) { p.counterT = p.counterT - 1 }
+    if (p.riseCool > 0) { p.riseCool = p.riseCool - 1 }
+    p.snap = p.snap * 0.86
+    // barra cinza (dano recuperavel) volta devagar
+    if (p.hitCool > 0) {
+        p.hitCool = p.hitCool - 1
+    } else if (p.rec > 0 && g.frame % 5 == 0 && p.st != K.FALL) {
+        p.rec = p.rec - 1
+        p.hp = imin(1000, p.hp + 1)
+    }
+    if (p.lagT > 0) {
+        p.lagT = p.lagT - 1
+    } else if (p.lag > p.hp) {
+        p.lag = imax(p.hp, p.lag - 6)
+    }
+    if (p.lag < p.hp) { p.lag = p.hp }
+    p.stT = p.stT + 1
+
+    if (p.st == K.FALL || p.st == K.WIN) { return }
+    if (p.st == K.RISE) {
+        if (p.stT >= 34) {
+            p.st = K.IDLE
+            p.stT = 0
+        }
+        return
+    }
+    if (p.st == K.HIT || p.st == K.BLOCKED) {
+        if (p.stT >= p.stLen) {
+            p.st = K.IDLE
+            p.stT = 0
+        }
+    } else if (p.st == K.SLIP) {
+        if (p.stT >= 22) {
+            p.st = K.IDLE
+            p.stT = 0
+        }
+    } else if (p.st == K.PUNCH) {
+        if (!p.hitDone && p.stT >= startupOf(p)) {
+            p.hitDone = true
+            resolve(g, p, o)
+            if (g.state != K.FIGHT) { return }
+        }
+        // janela de combo: encadeia o proximo golpe
+        var chain = p.stLen - 8
+        if (p.qPunch > 0 && p.stT >= chain && p.hitDone) {
+            startPunch(g, p, p.qPunch)
+        } else if (p.stT >= p.stLen) {
+            p.st = K.IDLE
+            p.stT = 0
+        }
+    }
+
+    // fisica / movimento
+    var spd = 2.0 + toD(stat(p.kind, 1)) * 0.32
+    if (p.sta < 250) { spd = spd * 0.7 }
+    var tx = 0.0
+    var tz = 0.0
+    if (p.st == K.IDLE) {
+        if (o.x > p.x) { p.face = 1 } else { p.face = -1 }
+        if (p.qSlip) {
+            p.qSlip = false
+            if (p.sta >= 40) {
+                p.st = K.SLIP
+                p.stT = 0
+                p.sta = p.sta - 40
+                sfx(g, K.S_WHOOSH)
+            }
+        } else if (p.qPunch > 0) {
+            startPunch(g, p, p.qPunch)
+        }
+        if (p.st == K.IDLE) {
+            var gm = 1.0
+            if (p.inG) { gm = 0.45 }
+            if (p.inL) { tx = tx - spd * gm }
+            if (p.inR) { tx = tx + spd * gm }
+            if (p.inU) { tz = tz - spd * gm * 0.55 }
+            if (p.inD) { tz = tz + spd * gm * 0.55 }
+        }
+    }
+    p.vx = p.vx + (tx - p.vx) * 0.25
+    p.vz = p.vz + (tz - p.vz) * 0.25
+    var nx = clampd(p.x + p.vx, toD(K.XMIN), toD(K.XMAX))
+    var nz = clampd(p.z + p.vz, 0.0, 100.0)
+    // nao atravessa o adversario
+    if (dabs(nz - o.z) < 20.0 && dabs(nx - o.x) < 52.0 && o.st != K.FALL) {
+        if (dabs(nx - o.x) < dabs(p.x - o.x)) { nx = p.x }
+    }
+    var moving = dabs(nx - p.x) + dabs(nz - p.z)
+    p.walk = p.walk + moving * 0.09
+    p.x = nx
+    p.z = nz
+    // folego
+    var mx = staMax(p)
+    var fol = stat(p.kind, 3)
+    if (p.st == K.IDLE) {
+        if (p.inG) {
+            p.sta = imin(mx, p.sta + 1)
+        } else if (moving > 0.3) {
+            p.sta = imin(mx, p.sta + 1 + fol / 2)
+        } else {
+            p.sta = imin(mx, p.sta + 2 + fol)
+        }
+    }
+    // inclinacao do tronco
+    var target = 0.0
+    if (p.st == K.PUNCH) { target = 0.6 }
+    if (p.st == K.HIT) { target = -0.9 }
+    if (p.st == K.SLIP) { target = -1.0 }
+    if (p.inG && p.st == K.IDLE) { target = 0.2 }
+    p.lean = p.lean + (target - p.lean) * 0.3
+}

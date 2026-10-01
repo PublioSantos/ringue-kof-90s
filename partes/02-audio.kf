@@ -1,0 +1,537 @@
+
+// ============================================================================
+//  AUDIO 2026 - sintese aditiva/subtrativa em Kof, WAV PCM 16 bits
+// ============================================================================
+
+// uma voz: oscilador + envelope + filtros
+class Voice {
+    Int kind = 0          // 0 seno, 1 quadrada, 2 serra, 3 triangulo, 4 ruido
+    Double freq = 440.0
+    Double fmul = 1.0     // varredura de frequencia por amostra
+    Double amp = 0.5
+    Double decay = 0.999  // queda do envelope por amostra
+    Int delay = 0         // inicio (amostras)
+    Int attack = 1        // subida (amostras)
+    Int len = 1000        // duracao (amostras)
+    Double lp = 1.0       // passa-baixa (1 = aberto)
+    Double hp = 0.0       // passa-alta (0 = desligado)
+    Double lfoF = 0.0     // modulacao de amplitude (Hz)
+    Double lfoD = 0.0
+}
+
+class Snd {
+    Int sr = 22050
+    Int n = 0
+    Double gain = 1.0
+    List<Voice> vs = listOf<Voice>()
+}
+
+Snd newSnd(Double secs, Double gain) {
+    var s = Snd()
+    s.n = toI(secs * toD(s.sr))
+    s.gain = gain
+    return s
+}
+
+Int smp(Snd s, Double secs) {
+    return toI(secs * toD(s.sr))
+}
+
+Voice vox(Snd s, Int kind, Double freq, Double fmul, Double amp, Double decay, Double at, Double att, Double dur) {
+    var v = Voice()
+    v.kind = kind
+    v.freq = freq
+    v.fmul = fmul
+    v.amp = amp
+    v.decay = decay
+    v.delay = smp(s, at)
+    v.attack = imax(1, smp(s, att))
+    v.len = imax(1, smp(s, dur))
+    s.vs.add(v)
+    return v
+}
+
+// renderiza uma voz somando no buffer
+renderVoice(Snd s, Voice v, Double[] buf, Rng r) {
+    var ph = 0.0
+    var f = v.freq
+    var env = 0.0
+    var lpS = 0.0
+    var hpS = 0.0
+    var sr = toD(s.sr)
+    var end = imin(s.n, v.delay + v.len)
+    var tail = imax(1, v.len / 12)
+    for (var i = v.delay; i < end; i++) {
+        var t = i - v.delay
+        if (t < v.attack) {
+            env = v.amp * toD(t) / toD(v.attack)
+        } else if (t == v.attack) {
+            env = v.amp
+        } else {
+            env = env * v.decay
+        }
+        // fade-out curto no fim (sem estalo)
+        var fade = 1.0
+        var left = v.len - t
+        if (left < tail) { fade = toD(left) / toD(tail) }
+        var x = 0.0
+        if (v.kind == 0) {
+            x = Tab.SIN.get(toI(ph * toD(K.TN)) % K.TN)
+        } else if (v.kind == 1) {
+            if (ph < 0.5) { x = 1.0 } else { x = -1.0 }
+        } else if (v.kind == 2) {
+            x = 2.0 * ph - 1.0
+        } else if (v.kind == 3) {
+            x = 1.0 - 4.0 * dabs(ph - 0.5)
+        } else {
+            x = rndd(r) * 2.0 - 1.0
+        }
+        ph = ph + f / sr
+        while (ph >= 1.0) { ph = ph - 1.0 }
+        f = f * v.fmul
+        lpS = lpS + v.lp * (x - lpS)
+        var y = lpS
+        if (v.hp > 0.0) {
+            hpS = hpS + v.hp * (y - hpS)
+            y = y - hpS
+        }
+        var am = 1.0
+        if (v.lfoF > 0.0) {
+            var lph = toD(t) * v.lfoF / sr
+            am = 1.0 - v.lfoD * (0.5 + 0.5 * sn(lph * K.TAU))
+        }
+        buf[i] = buf[i] + y * env * am * fade
+    }
+}
+
+// ---------------------------------------------------------------- base64 / WAV
+class Enc {
+    Int acc = 0
+    Int n = 0
+    String out = ""
+    String chunk = ""
+}
+
+class B64 {
+    static String A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+}
+
+b64c(Enc e, Int v) {
+    e.chunk = e.chunk + B64.A.substring(v, v + 1)
+    if (e.chunk.length() >= 4096) {
+        e.out = e.out + e.chunk
+        e.chunk = ""
+    }
+}
+
+pushB(Enc e, Int b) {
+    e.acc = e.acc * 256 + b
+    e.n = e.n + 1
+    if (e.n == 3) {
+        b64c(e, e.acc / 262144)
+        b64c(e, (e.acc / 4096) % 64)
+        b64c(e, (e.acc / 64) % 64)
+        b64c(e, e.acc % 64)
+        e.acc = 0
+        e.n = 0
+    }
+}
+
+String finishB64(Enc e) {
+    if (e.n == 1) {
+        var v = e.acc * 65536
+        b64c(e, v / 262144)
+        b64c(e, (v / 4096) % 64)
+        e.chunk = e.chunk + "=="
+    } else if (e.n == 2) {
+        var v = e.acc * 256
+        b64c(e, v / 262144)
+        b64c(e, (v / 4096) % 64)
+        b64c(e, (v / 64) % 64)
+        e.chunk = e.chunk + "="
+    }
+    return e.out + e.chunk
+}
+
+push16(Enc e, Int v) {
+    var u = v
+    if (u < 0) { u = u + 65536 }
+    pushB(e, u % 256)
+    pushB(e, (u / 256) % 256)
+}
+
+push32(Enc e, Int v) {
+    push16(e, v % 65536)
+    push16(e, v / 65536)
+}
+
+pushAscii(Enc e, String s) {
+    var up = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    var lo = "abcdefghijklmnopqrstuvwxyz"
+    for (var i = 0; i < s.length(); i++) {
+        var ch = s.substring(i, i + 1)
+        var u = up.indexOf(ch)
+        if (u >= 0) {
+            pushB(e, 65 + u)
+        } else if (lo.indexOf(ch) >= 0) {
+            pushB(e, 97 + lo.indexOf(ch))
+        } else {
+            pushB(e, 32)
+        }
+    }
+}
+
+String renderSnd(Snd s, Rng r) {
+    Double[] buf = new Double[s.n]
+    for (var i = 0; i < s.n; i++) { buf[i] = 0.0 }
+    for (var v in s.vs) { renderVoice(s, v, buf, r) }
+    var e = Enc()
+    var bytes = s.n * 2
+    pushAscii(e, "RIFF")
+    push32(e, 36 + bytes)
+    pushAscii(e, "WAVEfmt ")
+    push32(e, 16)
+    push16(e, 1)
+    push16(e, 1)
+    push32(e, s.sr)
+    push32(e, s.sr * 2)
+    push16(e, 2)
+    push16(e, 16)
+    pushAscii(e, "data")
+    push32(e, bytes)
+    for (var i = 0; i < s.n; i++) {
+        // saturacao suave (soft clip) e ganho final
+        var x = buf[i] * s.gain
+        var y = x / (1.0 + dabs(x) * 0.6)
+        push16(e, toI(clampd(y, -1.0, 1.0) * 30000.0))
+    }
+    return "data:audio/wav;base64," + finishB64(e)
+}
+
+// ---------------------------------------------------------------- receitas
+impact(Snd s, Double at, Double f0, Double f1sweep, Double body, Double crack, Double tone) {
+    // baque grave que cai de tom
+    var th = vox(s, 0, f0, f1sweep, body, 0.9993, at, 0.002, 0.30)
+    th.lp = 0.6
+    // estalo da luva (ruido filtrado)
+    var nz = vox(s, 4, 0.0, 1.0, crack, 0.9965, at, 0.001, 0.09)
+    nz.lp = 0.45
+    // "tapa" de couro (ruido agudo curtissimo)
+    var sl = vox(s, 4, 0.0, 1.0, crack * 0.6, 0.985, at, 0.0005, 0.03)
+    sl.lp = 0.9
+    sl.hp = 0.08
+    // ressonancia do corpo
+    var rs = vox(s, 3, tone, 0.9997, body * 0.25, 0.9975, at, 0.002, 0.12)
+    rs.lp = 0.3
+}
+
+whoosh(Snd s, Double at, Double dur, Double amp) {
+    var w = vox(s, 4, 0.0, 1.0, amp, 0.99985, at, dur * 0.55, dur)
+    w.lp = 0.09
+    w.hp = 0.02
+    var w2 = vox(s, 4, 0.0, 1.0, amp * 0.5, 0.9998, at + dur * 0.2, dur * 0.4, dur * 0.8)
+    w2.lp = 0.25
+    w2.hp = 0.1
+}
+
+bellStrike(Snd s, Double at, Double f0, Double amp) {
+    vox(s, 0, f0, 1.0, amp * 0.55, 0.99988, at, 0.001, 1.8)
+    vox(s, 0, f0 * 2.756, 1.0, amp * 0.28, 0.99982, at, 0.001, 1.3)
+    vox(s, 0, f0 * 5.404, 1.0, amp * 0.16, 0.9997, at, 0.001, 0.9)
+    vox(s, 0, f0 * 8.933, 1.0, amp * 0.09, 0.9995, at, 0.001, 0.5)
+    var k = vox(s, 4, 0.0, 1.0, amp * 0.4, 0.99, at, 0.0005, 0.03)
+    k.hp = 0.2
+}
+
+crowd(Snd s, Double at, Double dur, Double amp, Double att, Double dec) {
+    var lps = 0.03
+    for (var i = 0; i < 6; i++) {
+        var v = vox(s, 4, 0.0, 1.0, amp / 3.0, dec, at + toD(i) * 0.03, att, dur)
+        v.lp = lps + toD(i) * 0.025
+        v.hp = 0.004
+        v.lfoF = 3.0 + toD(i) * 1.7
+        v.lfoD = 0.35
+    }
+}
+
+Snd recipe(Int id) {
+    if (id == K.S_JAB) {
+        var s = newSnd(0.32, 1.1)
+        impact(s, 0.0, 190.0, 0.9992, 0.75, 0.6, 320.0)
+        return s
+    }
+    if (id == K.S_CROSS) {
+        var s = newSnd(0.42, 1.2)
+        whoosh(s, 0.0, 0.07, 0.25)
+        impact(s, 0.045, 165.0, 0.9992, 0.95, 0.8, 260.0)
+        return s
+    }
+    if (id == K.S_HOOK) {
+        var s = newSnd(0.5, 1.25)
+        whoosh(s, 0.0, 0.11, 0.35)
+        impact(s, 0.075, 150.0, 0.9991, 1.0, 0.9, 230.0)
+        return s
+    }
+    if (id == K.S_UPPER) {
+        var s = newSnd(0.6, 1.3)
+        whoosh(s, 0.0, 0.14, 0.4)
+        impact(s, 0.1, 140.0, 0.999, 1.1, 1.0, 200.0)
+        var cr = vox(s, 4, 0.0, 1.0, 0.35, 0.995, 0.1, 0.001, 0.12)
+        cr.lp = 0.7
+        return s
+    }
+    if (id == K.S_BODY) {
+        var s = newSnd(0.5, 1.2)
+        var th = vox(s, 0, 115.0, 0.99925, 1.1, 0.9994, 0.0, 0.002, 0.4)
+        th.lp = 0.5
+        var nz = vox(s, 4, 0.0, 1.0, 0.8, 0.998, 0.0, 0.001, 0.14)
+        nz.lp = 0.14
+        var sl = vox(s, 4, 0.0, 1.0, 0.3, 0.99, 0.0, 0.0005, 0.03)
+        sl.lp = 0.6
+        return s
+    }
+    if (id == K.S_BLOCK) {
+        var s = newSnd(0.28, 1.0)
+        var th = vox(s, 0, 230.0, 0.9993, 0.55, 0.998, 0.0, 0.001, 0.2)
+        th.lp = 0.5
+        var nz = vox(s, 4, 0.0, 1.0, 0.55, 0.995, 0.0, 0.001, 0.08)
+        nz.lp = 0.22
+        return s
+    }
+    if (id == K.S_WHOOSH) {
+        var s = newSnd(0.3, 2.2)
+        whoosh(s, 0.0, 0.26, 0.55)
+        return s
+    }
+    if (id == K.S_BELL) {
+        var s = newSnd(2.4, 0.9)
+        bellStrike(s, 0.0, 1040.0, 0.9)
+        bellStrike(s, 0.42, 1040.0, 0.85)
+        return s
+    }
+    if (id == K.S_KD) {
+        var s = newSnd(1.6, 1.3)
+        var th = vox(s, 0, 75.0, 0.99965, 1.2, 0.99975, 0.0, 0.003, 1.2)
+        th.lp = 0.5
+        var nz = vox(s, 4, 0.0, 1.0, 0.9, 0.9996, 0.0, 0.002, 0.8)
+        nz.lp = 0.05
+        var e1 = vox(s, 0, 70.0, 0.99965, 0.45, 0.9997, 0.13, 0.003, 0.9)
+        e1.lp = 0.4
+        var e2 = vox(s, 0, 66.0, 0.99965, 0.2, 0.9997, 0.27, 0.003, 0.8)
+        e2.lp = 0.4
+        crowd(s, 0.15, 1.4, 0.6, 0.25, 0.99996)
+        return s
+    }
+    if (id == K.S_CHEER) {
+        var s = newSnd(3.2, 2.2)
+        crowd(s, 0.0, 3.1, 0.9, 0.5, 0.99997)
+        var wh = vox(s, 0, 2300.0, 1.00008, 0.08, 0.99995, 0.6, 0.05, 0.45)
+        wh.lfoF = 9.0
+        wh.lfoD = 0.5
+        var wh2 = vox(s, 0, 2600.0, 0.99995, 0.07, 0.99995, 1.4, 0.05, 0.5)
+        wh2.lfoF = 7.0
+        wh2.lfoD = 0.4
+        return s
+    }
+    if (id == K.S_TICK) {
+        var s = newSnd(0.22, 0.8)
+        vox(s, 0, 990.0, 1.0, 0.5, 0.9985, 0.0, 0.002, 0.18)
+        vox(s, 0, 1980.0, 1.0, 0.14, 0.998, 0.0, 0.002, 0.12)
+        return s
+    }
+    if (id == K.S_UI) {
+        var s = newSnd(0.09, 0.7)
+        vox(s, 0, 1400.0, 1.0006, 0.4, 0.997, 0.0, 0.002, 0.08)
+        return s
+    }
+    if (id == K.S_OK) {
+        var s = newSnd(0.3, 0.7)
+        vox(s, 0, 880.0, 1.0, 0.35, 0.9985, 0.0, 0.002, 0.14)
+        vox(s, 0, 1320.0, 1.0, 0.35, 0.9985, 0.08, 0.002, 0.2)
+        vox(s, 3, 1760.0, 1.0, 0.12, 0.998, 0.08, 0.002, 0.2)
+        return s
+    }
+    if (id == K.S_PING) {
+        var s = newSnd(0.35, 0.8)
+        vox(s, 0, 1760.0, 1.0, 0.45, 0.9993, 0.0, 0.001, 0.32)
+        vox(s, 0, 2640.0, 1.0, 0.15, 0.999, 0.0, 0.001, 0.2)
+        return s
+    }
+    if (id == K.S_BUZZ) {
+        var s = newSnd(0.25, 0.7)
+        var b = vox(s, 1, 110.0, 1.0, 0.35, 0.9995, 0.0, 0.002, 0.22)
+        b.lp = 0.15
+        return s
+    }
+    if (id == K.S_STAR) {
+        var s = newSnd(0.7, 0.9)
+        var sw = vox(s, 2, 220.0, 1.00006, 0.3, 0.99985, 0.0, 0.02, 0.5)
+        sw.lp = 0.25
+        var sp = vox(s, 0, 2800.0, 1.0, 0.12, 0.9997, 0.1, 0.01, 0.5)
+        sp.lfoF = 18.0
+        sp.lfoD = 0.8
+        vox(s, 0, 1046.0, 1.0, 0.18, 0.9996, 0.25, 0.005, 0.4)
+        vox(s, 0, 1568.0, 1.0, 0.14, 0.9996, 0.3, 0.005, 0.38)
+        return s
+    }
+    if (id == K.S_SLIP) {
+        var s = newSnd(0.6, 1.5)
+        whoosh(s, 0.0, 0.16, 0.4)
+        vox(s, 0, 1568.0, 1.0, 0.22, 0.9994, 0.05, 0.003, 0.45)
+        vox(s, 0, 2093.0, 1.0, 0.18, 0.9994, 0.12, 0.003, 0.45)
+        return s
+    }
+    if (id == K.S_HEART) {
+        var s = newSnd(0.5, 1.0)
+        var a = vox(s, 0, 62.0, 0.9998, 0.9, 0.9988, 0.0, 0.004, 0.16)
+        a.lp = 0.4
+        var b = vox(s, 0, 55.0, 0.9998, 0.7, 0.9988, 0.21, 0.004, 0.16)
+        b.lp = 0.4
+        return s
+    }
+    if (id == K.S_CROWD) {
+        // ambiente da arena (loop de 6 s)
+        var s = newSnd(6.0, 1.3)
+        crowd(s, 0.0, 6.0, 0.5, 0.05, 1.0)
+        return s
+    }
+    // trilha synthwave: 4 compassos a 120 bpm (8 s, loop)
+    var s = newSnd(8.0, 0.6)
+    var beat = 0.5
+    var roots = listOf(55.0, 43.65, 65.41, 49.0)
+    for (var bar = 0; bar < 4; bar++) {
+        var r0 = roots.get(bar)
+        var t0 = toD(bar) * 4.0 * beat
+        for (var b = 0; b < 4; b++) {
+            var tb = t0 + toD(b) * beat
+            var k = vox(s, 0, 150.0, 0.9988, 0.85, 0.9991, tb, 0.001, 0.3)
+            k.lp = 0.7
+            if (b == 1 || b == 3) {
+                var sn1 = vox(s, 4, 0.0, 1.0, 0.45, 0.9968, tb, 0.001, 0.2)
+                sn1.lp = 0.6
+                sn1.hp = 0.03
+                vox(s, 3, 190.0, 0.9995, 0.2, 0.996, tb, 0.001, 0.12)
+            }
+            for (var h = 0; h < 2; h++) {
+                var hh = vox(s, 4, 0.0, 1.0, 0.12, 0.99, tb + toD(h) * beat / 2.0, 0.0005, 0.04)
+                hh.hp = 0.35
+                var bs = vox(s, 2, r0 * toD(1 + h), 1.0, 0.3, 0.9997, tb + toD(h) * beat / 2.0, 0.003, beat / 2.0)
+                bs.lp = 0.07
+            }
+            // arpejo (16 avos)
+            for (var q = 0; q < 4; q++) {
+                var mult = 4.0
+                if (q == 1) { mult = 5.0 }
+                if (q == 2) { mult = 6.0 }
+                if (q == 3) { mult = 8.0 }
+                var ar = vox(s, 1, r0 * mult, 1.0, 0.07, 0.9988, tb + toD(q) * beat / 4.0, 0.002, beat / 4.0)
+                ar.lp = 0.18
+            }
+        }
+        // pad do acorde
+        var p1 = vox(s, 3, r0 * 4.0, 1.0, 0.07, 0.99999, t0, 0.3, 4.0 * beat)
+        p1.lfoF = 0.5
+        p1.lfoD = 0.3
+        vox(s, 3, r0 * 4.0 * 1.26, 1.0, 0.05, 0.99999, t0, 0.3, 4.0 * beat)
+        vox(s, 3, r0 * 6.0, 1.0, 0.05, 0.99999, t0, 0.3, 4.0 * beat)
+    }
+    return s
+}
+
+// ---------------------------------------------------------------- mixer
+class Mixer {
+    List<String> uris = listOf<String>()
+    Int loaded = 0
+    Int total = 20
+    Bool on = true
+    Bool music = true
+    Int q0 = -1
+    Int q1 = -1
+    Int q2 = -1
+    Int q3 = -1
+    Int rr = 0
+    Int musicT = 0
+    Int crowdT = 0
+    Bool playMusic = false
+    Bool playCrowd = false
+    Rng r = Rng()
+}
+
+// gera um som por chamada (a abertura nao trava)
+Bool loadStep(Mixer m) {
+    if (m.loaded >= m.total) { return true }
+    m.uris.add(renderSnd(recipe(m.loaded), m.r))
+    m.loaded = m.loaded + 1
+    return m.loaded >= m.total
+}
+
+sfx(Game g, Int id) {
+    var m = g.mix
+    if (!m.on || m.loaded <= id) { return }
+    if (m.q0 < 0) {
+        m.q0 = id
+    } else if (m.q1 < 0) {
+        m.q1 = id
+    } else if (m.q2 < 0) {
+        m.q2 = id
+    } else {
+        m.q3 = id
+    }
+}
+
+fire(Audio a, String u) {
+    a.setSrc(u)
+    a.play()
+}
+
+drain(Game g, Audio c0, Audio c1, Audio c2, Audio c3, Audio c4, Audio mus, Audio amb) {
+    var m = g.mix
+    for (var k = 0; k < 4; k++) {
+        var id = m.q0
+        if (k == 1) { id = m.q1 }
+        if (k == 2) { id = m.q2 }
+        if (k == 3) { id = m.q3 }
+        if (id >= 0) {
+            var u = m.uris.get(id)
+            if (m.rr == 0) {
+                fire(c0, u)
+            } else if (m.rr == 1) {
+                fire(c1, u)
+            } else if (m.rr == 2) {
+                fire(c2, u)
+            } else if (m.rr == 3) {
+                fire(c3, u)
+            } else {
+                fire(c4, u)
+            }
+            m.rr = (m.rr + 1) % 5
+        }
+    }
+    m.q0 = -1
+    m.q1 = -1
+    m.q2 = -1
+    m.q3 = -1
+    // trilha e ambiente em loop
+    var wantMusic = m.on && m.music && m.playMusic && m.loaded > K.S_MUSIC
+    if (wantMusic) {
+        if (m.musicT <= 0) {
+            fire(mus, m.uris.get(K.S_MUSIC))
+            m.musicT = 480
+        }
+        m.musicT = m.musicT - 1
+    } else if (m.musicT > 0) {
+        mus.pause()
+        m.musicT = 0
+    }
+    var wantCrowd = m.on && m.playCrowd && m.loaded > K.S_CROWD
+    if (wantCrowd) {
+        if (m.crowdT <= 0) {
+            fire(amb, m.uris.get(K.S_CROWD))
+            m.crowdT = 360
+        }
+        m.crowdT = m.crowdT - 1
+    } else if (m.crowdT > 0) {
+        amb.pause()
+        m.crowdT = 0
+    }
+}
