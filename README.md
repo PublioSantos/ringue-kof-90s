@@ -19,7 +19,7 @@ juízes, torcida e trilha sintetizada. Continua tudo escrito em Kof.
 
 ## Jogue online
 
-**[▶ Abrir no navegador](https://publiosatnos.github.io/ringue-kof-90s/web/)**
+**[▶ Abrir no navegador](https://publiosantos.github.io/ringue-kof-90s/web/)**
 
 ## Como rodar
 
