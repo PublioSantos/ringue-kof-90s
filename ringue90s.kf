@@ -2598,7 +2598,7 @@ drawFighter(Canvas c, Game g, Fighter p) {
             gry = lerpd(gry, -166.0, e)
         } else if (p.punch == K.HOOK) {
             gfx = lerpd(gfx, 104.0, e)
-            gfy = lerpd(gfy, -168.0, e) - sn(e * K.PI) * 20.0
+            gfy = lerpd(-108.0, -180.0, e) + sn(e * K.PI) * 22.0
             dirF = -1.0
         } else if (p.punch == K.UPPER) {
             grx = lerpd(14.0, 68.0, e)
