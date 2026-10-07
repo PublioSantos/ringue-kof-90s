@@ -17,6 +17,10 @@ juízes, torcida e trilha sintetizada. Continua tudo escrito em Kof.
 |---|---|
 | ![Tela de seleção com fichas dos lutadores](docs/selecao.png) | ![Fim de round com a pontuação dos três juízes](docs/juizes.png) |
 
+## Jogue online
+
+**[▶ Abrir no navegador](https://publiosatnos.github.io/ringue-kof-90s/web/)**
+
 ## Como rodar
 
 Baixe **`ringue-kof-90s.html`** (botão *Download raw file* na página do

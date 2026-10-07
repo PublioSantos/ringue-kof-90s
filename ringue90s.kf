@@ -2558,7 +2558,7 @@ drawFighter(Canvas c, Game g, Fighter p) {
         slipX = -22.0 * u2
         slipY = 10.0 * u2
     }
-    if (p.st == K.PUNCH && (p.punch == K.BODY || p.punch == K.UPPER)) { dip = 7.0 * punchExt(p) }
+    if (p.st == K.PUNCH && p.punch == K.BODY) { dip = 7.0 * punchExt(p) }
     if (p.st == K.WIN) { bob = -dabs(sn(toD(p.stT) * 0.15)) * 10.0 }
     var hipY = -94.0 + bob * 0.4 + dip
     var neckX = lx + 4.0 + slipX * 0.6
@@ -2601,8 +2601,8 @@ drawFighter(Canvas c, Game g, Fighter p) {
             gfy = lerpd(gfy, -168.0, e) - sn(e * K.PI) * 20.0
             dirF = -1.0
         } else if (p.punch == K.UPPER) {
-            grx = lerpd(26.0, 88.0, e)
-            gry = lerpd(-118.0, -196.0, e)
+            grx = lerpd(14.0, 68.0, e)
+            gry = lerpd(-92.0, -214.0, e)
         } else {
             grx = lerpd(grx, 46.0 + 80.0, e)
             gry = lerpd(gry, -124.0, e)

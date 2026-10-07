@@ -6586,7 +6586,7 @@ function drawFighter(c, g, p) {
         slipX = (-22.0 * _scopedVar$u2);
         slipY = (10.0 * _scopedVar$u2);
     }
-    if (((p.st === K.PUNCH) & ((p.punch === K.BODY) | (p.punch === K.UPPER)))) {
+    if (((p.st === K.PUNCH) & (p.punch === K.BODY))) {
         dip = (7.0 * punchExt(p));
     }
     if ((p.st === K.WIN)) {
@@ -6634,8 +6634,8 @@ function drawFighter(c, g, p) {
                     dirF = -1.0;
                 } else {
                     if ((p.punch === K.UPPER)) {
-                        grx = lerpd(26.0, 88.0, _scopedVar$e);
-                        gry = lerpd(-118.0, -196.0, _scopedVar$e);
+                        grx = lerpd(14.0, 68.0, _scopedVar$e);
+                        gry = lerpd(-92.0, -214.0, _scopedVar$e);
                     } else {
                         grx = lerpd(grx, 126.0, _scopedVar$e);
                         gry = lerpd(gry, -124.0, _scopedVar$e);
